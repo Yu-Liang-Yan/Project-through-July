@@ -1,0 +1,40 @@
+package com.guardianbaby.controller;
+
+import com.guardianbaby.dto.ApiResponse;
+import com.guardianbaby.dto.DeviceResponse;
+import com.guardianbaby.service.DeviceService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/devices")
+@RequiredArgsConstructor
+public class DeviceController {
+
+    private final DeviceService deviceService;
+
+    // 临时：从请求参数获取 userId，第二轮改 JWT 后从 token 中提取
+    @GetMapping
+    public ApiResponse<List<DeviceResponse>> list(@RequestParam Long userId) {
+        return ApiResponse.ok(deviceService.listDevices(userId));
+    }
+
+    @PostMapping
+    public ApiResponse<DeviceResponse> add(@RequestParam Long userId,
+                                           @RequestBody Map<String, String> body) {
+        String name = body.get("name");
+        String type = body.get("type");
+        DeviceResponse device = deviceService.addDevice(userId, name, type);
+        return ApiResponse.ok("设备添加成功", device);
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> remove(@PathVariable Long id,
+                                    @RequestParam Long userId) {
+        deviceService.removeDevice(id, userId);
+        return ApiResponse.ok("设备已移除", null);
+    }
+}

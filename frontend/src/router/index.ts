@@ -1,0 +1,68 @@
+import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import Login from '@/views/Login.vue'
+import Dashboard from '@/views/Dashboard.vue'
+import Devices from '@/views/Devices.vue'
+import TimeControl from '@/views/TimeControl.vue'
+import BlockList from '@/views/BlockList.vue'
+import Statistics from '@/views/Statistics.vue'
+import Settings from '@/views/Settings.vue'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: Dashboard,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/devices',
+    name: 'Devices',
+    component: Devices,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/time-control',
+    name: 'TimeControl',
+    component: TimeControl,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/block-list',
+    name: 'BlockList',
+    component: BlockList,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/statistics',
+    name: 'Statistics',
+    component: Statistics,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: Settings,
+    meta: { requiresAuth: true }
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+router.beforeEach((to, _from, next) => {
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    next('/')
+  } else {
+    next()
+  }
+})
+
+export default router

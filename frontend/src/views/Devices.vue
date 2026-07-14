@@ -1,0 +1,242 @@
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { useDevicesStore } from '@/stores/devices'
+import Sidebar from '@/components/Sidebar.vue'
+import Header from '@/components/Header.vue'
+import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw } from '@lucide/vue'
+
+const router = useRouter()
+const userStore = useUserStore()
+const devicesStore = useDevicesStore()
+
+const isScanning = ref(false)
+const showAddModal = ref(false)
+const newDevice = ref({
+  name: '',
+  type: 'phone' as 'phone' | 'tablet' | 'computer' | 'watch' | 'reader'
+})
+
+const deviceTypes = [
+  { value: 'phone', label: '手机', icon: Smartphone },
+  { value: 'tablet', label: '平板', icon: Tablet },
+  { value: 'computer', label: '电脑', icon: Laptop },
+  { value: 'watch', label: '手表', icon: Watch },
+  { value: 'reader', label: '阅读器', icon: BookOpen }
+]
+
+const getDeviceIcon = (type: string) => {
+  const device = deviceTypes.find(d => d.value === type)
+  return device ? device.icon : Smartphone
+}
+
+const getDeviceLabel = (type: string) => {
+  const device = deviceTypes.find(d => d.value === type)
+  return device ? device.label : type
+}
+
+const scanDevices = async () => {
+  isScanning.value = true
+  ;(window as any).showToast('正在扫描设备...', 'info')
+  
+  await new Promise(resolve => setTimeout(resolve, 2000))
+  
+  const mockDevices = [
+    { id: Date.now() + 1, name: '小明的手机', type: 'phone' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() },
+    { id: Date.now() + 2, name: '客厅电脑', type: 'computer' as const, status: 'offline' as const, lastActive: new Date(Date.now() - 3600000).toISOString(), registeredAt: new Date().toISOString() },
+    { id: Date.now() + 3, name: '平板设备', type: 'tablet' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() }
+  ]
+  
+  devicesStore.setDevices(mockDevices)
+  isScanning.value = false
+  ;(window as any).showToast(`扫描完成，发现 ${mockDevices.length} 个设备`, 'success')
+}
+
+const addDevice = () => {
+  if (!newDevice.value.name) {
+    ;(window as any).showToast('请输入设备名称', 'warning')
+    return
+  }
+  
+  const device = {
+    id: Date.now(),
+    name: newDevice.value.name,
+    type: newDevice.value.type,
+    status: 'online' as const,
+    lastActive: new Date().toISOString(),
+    registeredAt: new Date().toISOString()
+  }
+  
+  devicesStore.addDevice(device)
+  showAddModal.value = false
+  newDevice.value = { name: '', type: 'phone' }
+  ;(window as any).showToast('设备添加成功', 'success')
+}
+
+const removeDevice = (id: number) => {
+  if (confirm('确定要移除该设备吗？')) {
+    devicesStore.removeDevice(id)
+    ;(window as any).showToast('设备已移除', 'info')
+  }
+}
+
+onMounted(() => {
+  userStore.loadFromStorage()
+  devicesStore.loadFromStorage()
+  
+  if (!userStore.isLoggedIn) {
+    router.push('/')
+  }
+})
+</script>
+
+<template>
+  <div class="page-container">
+    <Sidebar />
+    <main class="content-area lg:ml-64">
+      <Header title="设备管理" subtitle="管理所有受控设备" />
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div class="relative">
+          <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="搜索设备..."
+            class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none w-full sm:w-64"
+          />
+        </div>
+        <div class="flex gap-3">
+          <button
+            @click="scanDevices"
+            :disabled="isScanning"
+            class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw :class="['w-5 h-5', isScanning ? 'animate-spin' : '']" />
+            {{ isScanning ? '扫描中...' : '扫描设备' }}
+          </button>
+          <button
+            @click="showAddModal = true"
+            class="flex items-center gap-2 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            <Plus class="w-5 h-5" />
+            手动添加
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div v-if="devicesStore.devices.length === 0" class="text-center py-12">
+          <Laptop class="w-16 h-16 mx-auto text-gray-300 mb-4" />
+          <p class="text-gray-500">暂无设备，请扫描或添加设备</p>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-gray-200">
+                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">设备名称</th>
+                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">类型</th>
+                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">状态</th>
+                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">最后活动</th>
+                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="device in devicesStore.devices"
+                :key="device.id"
+                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+              >
+                <td class="py-4 px-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <component :is="getDeviceIcon(device.type)" class="w-5 h-5 text-gray-600" />
+                    </div>
+                    <span class="font-medium text-gray-800">{{ device.name }}</span>
+                  </div>
+                </td>
+                <td class="py-4 px-4">
+                  <span class="text-sm text-gray-600">{{ getDeviceLabel(device.type) }}</span>
+                </td>
+                <td class="py-4 px-4">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2 py-1 text-xs font-medium rounded',
+                      device.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    ]"
+                  >
+                    <span :class="['w-2 h-2 rounded-full mr-1', device.status === 'online' ? 'bg-green-500' : 'bg-red-500']"></span>
+                    {{ device.status === 'online' ? '在线' : '离线' }}
+                  </span>
+                </td>
+                <td class="py-4 px-4">
+                  <span class="text-sm text-gray-500">{{ new Date(device.lastActive).toLocaleString() }}</span>
+                </td>
+                <td class="py-4 px-4">
+                  <button
+                    @click="removeDevice(device.id)"
+                    class="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <Trash2 class="w-5 h-5" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">添加设备</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">设备名称</label>
+              <input
+                v-model="newDevice.name"
+                type="text"
+                placeholder="输入设备名称"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">设备类型</label>
+              <div class="grid grid-cols-5 gap-2">
+                <button
+                  v-for="type in deviceTypes"
+                  :key="type.value"
+                  @click="newDevice.type = type.value as any"
+                  :class="[
+                    'flex flex-col items-center gap-1 p-3 border rounded-lg transition-colors',
+                    newDevice.type === type.value ? 'border-primary-500 bg-primary-50 text-primary-600' : 'border-gray-200 hover:border-gray-300'
+                  ]"
+                >
+                  <component :is="type.icon" class="w-6 h-6" />
+                  <span class="text-xs">{{ type.label }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button
+              @click="showAddModal = false"
+              class="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              @click="addDevice"
+              class="flex-1 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
+            >
+              添加
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</template>
