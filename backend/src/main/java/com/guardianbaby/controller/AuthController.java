@@ -49,4 +49,26 @@ public class AuthController {
             return ApiResponse.fail("密码错误，验证失败");
         }
     }
+
+    @PostMapping("/change-password")
+    public ApiResponse<?> changePassword(@RequestBody Map<String, Object> body) {
+        Long userId = body.get("userId") instanceof Number
+                ? ((Number) body.get("userId")).longValue() : null;
+        String oldPassword = (String) body.get("oldPassword");
+        String newPassword = (String) body.get("newPassword");
+
+        if (userId == null || oldPassword == null || newPassword == null) {
+            return ApiResponse.fail("请提供完整的密码信息");
+        }
+        if (newPassword.length() < 6) {
+            return ApiResponse.fail("新密码至少6位");
+        }
+
+        try {
+            authService.changePassword(userId, oldPassword, newPassword);
+            return ApiResponse.ok("密码修改成功", null);
+        } catch (Exception e) {
+            return ApiResponse.fail(e.getMessage());
+        }
+    }
 }

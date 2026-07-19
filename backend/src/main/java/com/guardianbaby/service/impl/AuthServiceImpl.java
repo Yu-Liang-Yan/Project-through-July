@@ -77,4 +77,17 @@ public class AuthServiceImpl implements AuthService {
                 .orElseThrow(() -> new BusinessException("用户不存在"));
         return passwordEncoder.matches(password, user.getPassword());
     }
+
+    @Override
+    @Transactional
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在"));
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            throw new BusinessException("原密码错误");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        auditLogService.log(userId, "changePassword", "用户修改密码", "127.0.0.1");
+    }
 }

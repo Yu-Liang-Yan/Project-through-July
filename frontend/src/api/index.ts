@@ -204,5 +204,21 @@ export const api = {
     listAll: (): Promise<ApiResponse<AuditLogEntry[]>> => {
       return fetch(`${BASE_URL}/audit-logs`, { headers: authHeaders() }).then(r => r.json())
     }
+  },
+  profile: {
+    changePassword: (userId: number, oldPassword: string, newPassword: string): Promise<ApiResponse<null>> => {
+      return fetch(`${BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId, oldPassword, newPassword })
+      }).then(r => r.json())
+    },
+    updateProfile: (userId: number, data: { phone?: string; ageGroup?: string }): Promise<ApiResponse<null>> => {
+      return fetch(`${BASE_URL}/users/profile`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId, ...data })
+      }).then(r => r.json())
+    }
   }
 }

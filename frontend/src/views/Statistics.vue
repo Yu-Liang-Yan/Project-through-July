@@ -1,175 +1,180 @@
-<script setup lang="ts">import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { useUserStore } from '@/stores/user';
-import { api } from '@/api';
-import type { UsageRecord } from '@/types';
-import Sidebar from '@/components/Sidebar.vue';
-import Header from '@/components/Header.vue';
-import { Bar } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/stores/user'
+import { api } from '@/api'
+import type { UsageRecord } from '@/types'
+import Sidebar from '@/components/Sidebar.vue'
+import Header from '@/components/Header.vue'
+import VChart from 'vue-echarts'
+import { use } from 'echarts/core'
+import { BarChart, PieChart } from 'echarts/charts'
+import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+import { Activity } from '@lucide/vue'
 
-const router = useRouter();
-const userStore = useUserStore();
-const activePeriod = ref<'day' | 'week' | 'month'>('day');
-const periods = [
- { value: 'day', label: '今日' },
- { value: 'week', label: '本周' },
- { value: 'month', label: '本月' }
-];
-const usageRecords = ref<UsageRecord[]>([]);
+use([BarChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
-const chartData = computed(() => {
- const labels = activePeriod.value === 'day'
- ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00']
- : activePeriod.value === 'week'
- ? ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
- : ['1日', '5日', '10日', '15日', '20日', '25日', '30日'];
- const data = [30, 60, 90, 120, 80, 100, 70].slice(0, labels.length);
- return {
- labels,
- datasets: [
- {
- label: '使用时长（分钟）',
- data,
- backgroundColor: 'rgba(59, 130, 246, 0.6)',
- borderColor: 'rgba(59, 130, 246, 1)',
- borderWidth: 1,
- borderRadius: 8
- }
- ]
- };
-});
+const router = useRouter()
+const userStore = useUserStore()
+const loading = ref(true)
+const activePeriod = ref<'day' | 'week' | 'month'>('day')
+const usageRecords = ref<UsageRecord[]>([])
 
-const chartOptions = {
- responsive: true,
- maintainAspectRatio: false,
- plugins: {
- legend: { position: 'top' as const }
- },
- scales: {
- y: {
- beginAtZero: true,
- ticks: { callback: (value: number | string) => `${value}分钟` }
- }
- }
-};
+const periods = [{ value: 'day' as const, label: '今日' }, { value: 'week' as const, label: '本周' }, { value: 'month' as const, label: '本月' }]
+
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
 
 const totalUsage = computed(() => {
- let totalMin = 0;
- usageRecords.value.forEach(r => { totalMin += Math.round((r.duration || 0) / 60); });
- const hours = Math.floor(totalMin / 60);
- const mins = totalMin % 60;
- return `${hours}小时${mins}分钟`;
-});
+  let total = 0; usageRecords.value.forEach(r => total += r.duration || 0)
+  return formatDuration(total)
+})
+
+// App usage bar chart
+const appChartOption = computed(() => {
+  const map = new Map<string, number>()
+  usageRecords.value.forEach(r => {
+    const min = Math.round((r.duration || 0) / 60) || 1
+    map.set(r.app, (map.get(r.app) || 0) + min)
+  })
+  const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1])
+  return {
+    tooltip: { trigger: 'axis' as const },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'category' as const, data: sorted.map(e => e[0]) },
+    yAxis: { type: 'value' as const, name: '分钟' },
+    series: [{
+      type: 'bar' as const, data: sorted.map(e => e[1]),
+      itemStyle: { borderRadius: [6, 6, 0, 0], color: '#3b82f6' }
+    }]
+  }
+})
+
+// Device pie chart
+const deviceChartOption = computed(() => {
+  const map = new Map<string, number>()
+  usageRecords.value.forEach(r => {
+    map.set(r.device, (map.get(r.device) || 0) + 1)
+  })
+  const data = Array.from(map.entries()).map(([name, value]) => ({ name, value }))
+  return {
+    tooltip: { trigger: 'item' as const },
+    series: [{
+      type: 'pie' as const, radius: ['45%', '75%'],
+      itemStyle: { borderRadius: 6, borderColor: '#fff', borderWidth: 2 },
+      label: { show: true, formatter: '{b}\n{d}%' },
+      data
+    }]
+  }
+})
 
 const loadRecords = async () => {
-  const uid = userStore.currentUser?.id ?? 1;
+  loading.value = true
+  const uid = userStore.currentUser?.id ?? 1
   try {
-    const res = await api.statistics.usage(uid, activePeriod.value);
-    if (res.success && res.data) {
-      usageRecords.value = res.data;
-    }
-  } catch (e) {
-    console.error(e);
-  }
-};
+    const res = await api.statistics.usage(uid, activePeriod.value)
+    if (res.success && res.data) usageRecords.value = res.data
+  } catch (e) { console.error(e) }
+  finally { loading.value = false }
+}
+
+const changePeriod = async (p: 'day' | 'week' | 'month') => {
+  activePeriod.value = p; await loadRecords()
+}
 
 onMounted(async () => {
- userStore.loadFromStorage();
- if (!userStore.isLoggedIn) {
- router.push('/');
- return;
- }
- await loadRecords();
-});
+  userStore.loadFromStorage()
+  if (!userStore.isLoggedIn) { router.push('/'); return }
+  await loadRecords()
+})
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="min-h-screen bg-gray-50">
     <Sidebar />
-    <main class="content-area lg:ml-64">
+    <div class="lg:ml-64">
       <Header title="使用统计" subtitle="查看设备使用情况" />
 
-      <div class="flex gap-3 mb-6">
-        <button
-          v-for="period in periods"
-          :key="period.value"
-          @click="activePeriod = period.value as any"
-          :class="[
-            'px-4 py-2 font-medium rounded-lg transition-colors',
-            activePeriod === period.value ? 'bg-primary-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
-          ]"
-        >
-          {{ period.label }}
-        </button>
-      </div>
-
-      <div class="card mb-6">
-        <div class="h-80">
-          <Bar :data="chartData" :options="chartOptions" />
-        </div>
-      </div>
-
-      <div class="card mb-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-semibold text-gray-800">使用统计摘要</h3>
-          <div class="text-right">
-            <p class="text-sm text-gray-500">总使用时长</p>
-            <p class="text-2xl font-bold text-primary-600">{{ totalUsage }}</p>
-          </div>
+      <div class="p-4 md:p-6 space-y-6">
+        <div v-if="loading" class="text-center py-16 text-gray-500">
+          <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+          <p>加载统计数据...</p>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div class="bg-blue-50 rounded-lg p-4">
-            <p class="text-sm text-gray-500">最多使用应用</p>
-            <p class="text-lg font-semibold text-gray-800">抖音</p>
-            <p class="text-sm text-blue-600">2h 30m</p>
+        <template v-else>
+          <!-- Period selector -->
+          <div class="flex gap-3">
+            <button v-for="p in periods" :key="p.value" @click="changePeriod(p.value)"
+              :class="['px-4 py-2 font-medium rounded-lg transition-colors', activePeriod === p.value ? 'bg-primary-600 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50']">
+              {{ p.label }}
+            </button>
           </div>
-          <div class="bg-green-50 rounded-lg p-4">
-            <p class="text-sm text-gray-500">最常用设备</p>
-            <p class="text-lg font-semibold text-gray-800">小明的手机</p>
-            <p class="text-sm text-green-600">3台设备</p>
-          </div>
-          <div class="bg-yellow-50 rounded-lg p-4">
-            <p class="text-sm text-gray-500">平均每日时长</p>
-            <p class="text-lg font-semibold text-gray-800">2h 15m</p>
-            <p class="text-sm text-yellow-600">较上周 +10%</p>
-          </div>
-        </div>
-      </div>
 
-      <div class="card">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">详细记录</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="border-b border-gray-200">
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">日期</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">设备</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">应用/网站</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">开始时间</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">结束时间</th>
-                <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">时长</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="record in usageRecords"
-                :key="record.id"
-                class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
-              >
-                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.startTime).toLocaleDateString() }}</td>
-                <td class="py-3 px-4 text-sm text-gray-800">{{ record.device }}</td>
-                <td class="py-3 px-4 text-sm text-gray-800">{{ record.app }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.startTime).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.endTime).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ Math.round(record.duration / 60) }}分钟</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+          <!-- Stats cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+              <p class="text-2xl font-bold text-primary-600">{{ usageRecords.length }}</p>
+              <p class="text-sm text-gray-500">使用次数</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+              <p class="text-2xl font-bold text-green-600">{{ totalUsage }}</p>
+              <p class="text-sm text-gray-500">总使用时长</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+              <p class="text-2xl font-bold text-blue-600">{{ new Set(usageRecords.map(r => r.app)).size }}</p>
+              <p class="text-sm text-gray-500">使用应用数</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 text-center">
+              <p class="text-2xl font-bold text-yellow-600">{{ new Set(usageRecords.map(r => r.device)).size }}</p>
+              <p class="text-sm text-gray-500">活跃设备</p>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">应用使用排行</h3>
+              <VChart :option="appChartOption" class="h-72" autoresize />
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-4 md:p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4">设备使用分布</h3>
+              <VChart :option="deviceChartOption" class="h-72" autoresize />
+            </div>
+          </div>
+
+          <!-- Detail table -->
+          <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 overflow-x-auto">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">详细记录</h3>
+            <table class="w-full">
+              <thead>
+                <tr class="border-b border-gray-200">
+                  <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">日期</th>
+                  <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">设备</th>
+                  <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">应用</th>
+                  <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">开始</th>
+                  <th class="text-left py-3 px-4 text-sm font-medium text-gray-500">时长</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="usageRecords.length === 0">
+                  <td colspan="5" class="text-center py-8 text-gray-400">暂无使用记录</td>
+                </tr>
+                <tr v-for="r in usageRecords" :key="r.id" class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(r.startTime).toLocaleDateString() }}</td>
+                  <td class="py-3 px-4 text-sm text-gray-800">{{ r.device }}</td>
+                  <td class="py-3 px-4 text-sm text-gray-800">{{ r.app }}</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(r.startTime).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) }}</td>
+                  <td class="py-3 px-4 text-sm text-gray-600">{{ formatDuration(r.duration) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
       </div>
-    </main>
+    </div>
   </div>
 </template>
