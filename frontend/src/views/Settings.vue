@@ -68,7 +68,7 @@ const handleChangePassword = async () => {
   if (newPassword.value.length < 6) { toast('密码至少6位', 'warning'); return }
   try {
     const uid = userStore.currentUser?.id ?? 1
-    const res = await api.profile.changePassword(uid, oldPassword.value, newPassword.value)
+    const res = await api.auth.changePassword(uid, oldPassword.value, newPassword.value)
     if (res.success) {
       toast('密码修改成功', 'success')
       showChangePassword.value = false
@@ -88,7 +88,7 @@ const loadProfileData = () => {
 const handleSaveProfile = async () => {
   try {
     const uid = userStore.currentUser?.id ?? 1
-    const res = await api.profile.updateProfile(uid, { phone: editPhone.value, ageGroup: editAgeGroup.value })
+    const res = await api.users.updateProfile(uid, { phone: editPhone.value, ageGroup: editAgeGroup.value })
     if (res.success) {
       toast('资料更新成功', 'success')
       userStore.loadFromStorage()

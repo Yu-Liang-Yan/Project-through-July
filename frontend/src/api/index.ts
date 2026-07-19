@@ -13,212 +13,247 @@ function getToken(): string | null {
 }
 
 function authHeaders(): Record<string, string> {
-  const token = getToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
   return headers
 }
 
-export const api = {
-  auth: {
-    login: (username: string, password: string): Promise<ApiResponse<{ id: number; username: string; phone: string; userType: string; ageGroup: string; token: string; createdAt: string }>> => {
-      return fetch(`${BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      }).then(r => r.json())
-    },
-    register: (dto: { username: string; phone: string; password: string; userType: string; ageGroup?: string }): Promise<ApiResponse<{ id: number; username: string; phone: string; userType: string; ageGroup: string }>> => {
-      return fetch(`${BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dto)
-      }).then(r => r.json())
-    },
-    verifyPassword: (userId: number, password: string): Promise<ApiResponse<boolean>> => {
-      return fetch(`${BASE_URL}/auth/verify`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId, password })
-      }).then(r => r.json())
-    }
-  },
-  devices: {
-    list: (userId: number): Promise<ApiResponse<Device[]>> => {
-      return fetch(`${BASE_URL}/devices?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    add: (userId: number, name: string, type: string): Promise<ApiResponse<Device>> => {
-      return fetch(`${BASE_URL}/devices?userId=${userId}`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ name, type })
-      }).then(r => r.json())
-    },
-    remove: (id: number, userId: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/devices/${id}?userId=${userId}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  timeSettings: {
-    get: (userId: number): Promise<ApiResponse<TimeSettings>> => {
-      return fetch(`${BASE_URL}/time-settings?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    update: (userId: number, settings: Partial<TimeSettings>): Promise<ApiResponse<TimeSettings>> => {
-      return fetch(`${BASE_URL}/time-settings?userId=${userId}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify(settings)
-      }).then(r => r.json())
-    }
-  },
-  blockList: {
-    list: (userId: number, type: string): Promise<ApiResponse<BlockItem[]>> => {
-      return fetch(`${BASE_URL}/block-list?userId=${userId}&type=${type}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    add: (userId: number, type: string, name: string): Promise<ApiResponse<BlockItem>> => {
-      return fetch(`${BASE_URL}/block-list?userId=${userId}`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ type, name })
-      }).then(r => r.json())
-    },
-    remove: (id: number, userId: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/block-list/${id}?userId=${userId}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  statistics: {
-    usage: (userId: number, period: string): Promise<ApiResponse<UsageRecord[]>> => {
-      return fetch(`${BASE_URL}/statistics/usage?userId=${userId}&period=${period}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    dashboard: (userId: number): Promise<ApiResponse<{ todayUsage: number; weekUsage: number; deviceCount: number; alertCount: number }>> => {
-      return fetch(`${BASE_URL}/statistics/dashboard?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  approvals: {
-    submit: (dto: { requesterId: number; type: string; description: string; extraMinutes?: number; targetName?: string }): Promise<ApiResponse<ApprovalRequest>> => {
-      return fetch(`${BASE_URL}/approvals`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify(dto)
-      }).then(r => r.json())
-    },
-    pending: (guardianId: number): Promise<ApiResponse<ApprovalRequest[]>> => {
-      return fetch(`${BASE_URL}/approvals/pending?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    myRequests: (requesterId: number): Promise<ApiResponse<ApprovalRequest[]>> => {
-      return fetch(`${BASE_URL}/approvals/my?requesterId=${requesterId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    approve: (id: number, reviewerId: number, message?: string): Promise<ApiResponse<ApprovalRequest>> => {
-      return fetch(`${BASE_URL}/approvals/${id}/approve?reviewerId=${reviewerId}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ message: message || '已同意' })
-      }).then(r => r.json())
-    },
-    reject: (id: number, reviewerId: number, reason?: string): Promise<ApiResponse<ApprovalRequest>> => {
-      return fetch(`${BASE_URL}/approvals/${id}/reject?reviewerId=${reviewerId}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ reason: reason || '已拒绝' })
-      }).then(r => r.json())
-    }
-  },
-  bindings: {
-    bind: (guardianId: number, protectedUserId: number): Promise<ApiResponse<GuardianBinding>> => {
-      return fetch(`${BASE_URL}/bindings?guardianId=${guardianId}&protectedUserId=${protectedUserId}`, {
-        method: 'POST',
-        headers: authHeaders()
-      }).then(r => r.json())
-    },
-    unbind: (id: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/bindings/${id}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
-    },
-    listProtectedUsers: (guardianId: number): Promise<ApiResponse<GuardianBinding[]>> => {
-      return fetch(`${BASE_URL}/bindings/protected-users?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    listGuardians: (protectedUserId: number): Promise<ApiResponse<GuardianBinding[]>> => {
-      return fetch(`${BASE_URL}/bindings/guardians?protectedUserId=${protectedUserId}`, { headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  alerts: {
-    listForGuardian: (guardianId: number): Promise<ApiResponse<Alert[]>> => {
-      return fetch(`${BASE_URL}/alerts/guardian?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    listForProtectedUser: (protectedUserId: number): Promise<ApiResponse<Alert[]>> => {
-      return fetch(`${BASE_URL}/alerts/protected-user?protectedUserId=${protectedUserId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    markRead: (id: number): Promise<ApiResponse<Alert>> => {
-      return fetch(`${BASE_URL}/alerts/${id}/read`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
-    },
-    resolve: (id: number): Promise<ApiResponse<Alert>> => {
-      return fetch(`${BASE_URL}/alerts/${id}/resolve`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
-    },
-    unreadCount: (guardianId: number): Promise<ApiResponse<number>> => {
-      return fetch(`${BASE_URL}/alerts/count?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  filters: {
-    add: (userId: number, category: string, pattern: string, action: string, priority?: number): Promise<ApiResponse<ContentFilterRule>> => {
-      return fetch(`${BASE_URL}/filters`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId: String(userId), category, pattern, action, priority: String(priority || 1) })
-      }).then(r => r.json())
-    },
-    list: (userId: number, category?: string): Promise<ApiResponse<ContentFilterRule[]>> => {
-      let url = `${BASE_URL}/filters?userId=${userId}`;
-      if (category) url += `&category=${category}`;
-      return fetch(url, { headers: authHeaders() }).then(r => r.json())
-    },
-    remove: (id: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/filters/${id}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  biometrics: {
-    register: (userId: number, type: string, confidenceThreshold?: number): Promise<ApiResponse<BiometricRecord>> => {
-      return fetch(`${BASE_URL}/biometrics`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId, type, confidenceThreshold: confidenceThreshold || 0.85 })
-      }).then(r => r.json())
-    },
-    list: (userId: number): Promise<ApiResponse<BiometricRecord[]>> => {
-      return fetch(`${BASE_URL}/biometrics?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    setStatus: (id: number, active: boolean): Promise<ApiResponse<BiometricRecord>> => {
-      return fetch(`${BASE_URL}/biometrics/${id}/status?active=${active}`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
-    },
-    verify: (userId: number, type: string): Promise<ApiResponse<boolean>> => {
-      return fetch(`${BASE_URL}/biometrics/verify`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId: String(userId), type })
-      }).then(r => r.json())
-    }
-  },
-  auditLogs: {
-    listByUser: (userId: number): Promise<ApiResponse<AuditLogEntry[]>> => {
-      return fetch(`${BASE_URL}/audit-logs/user?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
-    },
-    listAll: (): Promise<ApiResponse<AuditLogEntry[]>> => {
-      return fetch(`${BASE_URL}/audit-logs`, { headers: authHeaders() }).then(r => r.json())
-    }
-  },
-  profile: {
-    changePassword: (userId: number, oldPassword: string, newPassword: string): Promise<ApiResponse<null>> => {
-      return fetch(`${BASE_URL}/auth/change-password`, {
-        method: 'POST',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId, oldPassword, newPassword })
-      }).then(r => r.json())
-    },
-    updateProfile: (userId: number, data: { phone?: string; ageGroup?: string }): Promise<ApiResponse<null>> => {
-      return fetch(`${BASE_URL}/users/profile`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({ userId, ...data })
-      }).then(r => r.json())
-    }
+async function request<T>(url: string, options?: RequestInit): Promise<ApiResponse<T>> {
+  const res = await fetch(url, options)
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    return { success: false, message: body.message || `请求失败 (${res.status})` }
   }
+  return res.json()
+}
+
+export const api = {
+  // ======================== auth ========================
+  auth: {
+    login: (username: string, password: string) =>
+      request<{ id: number; username: string; phone: string; userType: string; ageGroup: string; token: string; createdAt: string }>(
+        `${BASE_URL}/auth/login`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) }
+      ),
+
+    register: (dto: { username: string; phone: string; password: string; userType: string; ageGroup?: string }) =>
+      request<{ id: number; username: string; phone: string; userType: string; ageGroup: string }>(
+        `${BASE_URL}/auth/register`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dto) }
+      ),
+
+    verifyPassword: (userId: number, password: string) =>
+      request<boolean>(
+        `${BASE_URL}/auth/verify`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId, password }) }
+      ),
+
+    changePassword: (userId: number, oldPassword: string, newPassword: string) =>
+      request<null>(
+        `${BASE_URL}/auth/change-password`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId, oldPassword, newPassword }) }
+      ),
+  },
+
+  // ======================== users ========================
+  users: {
+    getById: (id: number) =>
+      request<{ id: number; username: string; phone: string; userType: string; ageGroup: string }>(
+        `${BASE_URL}/users/${id}`,
+        { headers: authHeaders() }
+      ),
+
+    listProtected: (guardianId: number) =>
+      request<{ id: number; username: string; phone: string; userType: string; ageGroup: string }[]>(
+        `${BASE_URL}/users/protected?guardianId=${guardianId}`,
+        { headers: authHeaders() }
+      ),
+
+    updateProfile: (userId: number, data: { phone?: string; ageGroup?: string }) =>
+      request<null>(
+        `${BASE_URL}/users/profile`,
+        { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ userId, ...data }) }
+      ),
+  },
+
+  // ======================== devices ========================
+  devices: {
+    list: (userId: number) =>
+      request<Device[]>(`${BASE_URL}/devices?userId=${userId}`, { headers: authHeaders() }),
+
+    add: (userId: number, name: string, type: string) =>
+      request<Device>(
+        `${BASE_URL}/devices?userId=${userId}`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, type }) }
+      ),
+
+    remove: (id: number, userId: number) =>
+      request<void>(
+        `${BASE_URL}/devices/${id}?userId=${userId}`,
+        { method: 'DELETE', headers: authHeaders() }
+      ),
+  },
+
+  // ======================== timeSettings ========================
+  timeSettings: {
+    get: (userId: number) =>
+      request<TimeSettings>(`${BASE_URL}/time-settings?userId=${userId}`, { headers: authHeaders() }),
+
+    update: (userId: number, settings: Partial<TimeSettings>) =>
+      request<TimeSettings>(
+        `${BASE_URL}/time-settings?userId=${userId}`,
+        { method: 'PUT', headers: authHeaders(), body: JSON.stringify(settings) }
+      ),
+  },
+
+  // ======================== blockList ========================
+  blockList: {
+    list: (userId: number, type: string) =>
+      request<BlockItem[]>(`${BASE_URL}/block-list?userId=${userId}&type=${type}`, { headers: authHeaders() }),
+
+    add: (userId: number, type: string, name: string) =>
+      request<BlockItem>(
+        `${BASE_URL}/block-list?userId=${userId}`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ type, name }) }
+      ),
+
+    remove: (id: number, userId: number) =>
+      request<void>(
+        `${BASE_URL}/block-list/${id}?userId=${userId}`,
+        { method: 'DELETE', headers: authHeaders() }
+      ),
+  },
+
+  // ======================== statistics ========================
+  statistics: {
+    usage: (userId: number, period: string) =>
+      request<UsageRecord[]>(`${BASE_URL}/statistics/usage?userId=${userId}&period=${period}`, { headers: authHeaders() }),
+
+    dashboard: (userId: number) =>
+      request<{ todayUsage: number; weekUsage: number; deviceCount: number; alertCount: number; bindingCount: number; onlineDeviceCount: number; recentAlerts: any[] }>(
+        `${BASE_URL}/statistics/dashboard?userId=${userId}`,
+        { headers: authHeaders() }
+      ),
+  },
+
+  // ======================== approvals ========================
+  approvals: {
+    submit: (dto: { requesterId: number; type: string; description: string; extraMinutes?: number; targetName?: string }) =>
+      request<ApprovalRequest>(
+        `${BASE_URL}/approvals`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify(dto) }
+      ),
+
+    pending: (guardianId: number) =>
+      request<ApprovalRequest[]>(`${BASE_URL}/approvals/pending?guardianId=${guardianId}`, { headers: authHeaders() }),
+
+    myRequests: (requesterId: number) =>
+      request<ApprovalRequest[]>(`${BASE_URL}/approvals/my?requesterId=${requesterId}`, { headers: authHeaders() }),
+
+    approve: (id: number, reviewerId: number, message?: string) =>
+      request<ApprovalRequest>(
+        `${BASE_URL}/approvals/${id}/approve?reviewerId=${reviewerId}`,
+        { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ message: message || '已同意' }) }
+      ),
+
+    reject: (id: number, reviewerId: number, reason?: string) =>
+      request<ApprovalRequest>(
+        `${BASE_URL}/approvals/${id}/reject?reviewerId=${reviewerId}`,
+        { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ reason: reason || '已拒绝' }) }
+      ),
+
+    pendingCount: () =>
+      request<number>(`${BASE_URL}/approvals/pending-count`, { headers: authHeaders() }),
+  },
+
+  // ======================== bindings ========================
+  bindings: {
+    bind: (guardianId: number, protectedUserId: number) =>
+      request<GuardianBinding>(
+        `${BASE_URL}/bindings?guardianId=${guardianId}&protectedUserId=${protectedUserId}`,
+        { method: 'POST', headers: authHeaders() }
+      ),
+
+    unbind: (id: number) =>
+      request<void>(`${BASE_URL}/bindings/${id}`, { method: 'DELETE', headers: authHeaders() }),
+
+    listProtectedUsers: (guardianId: number) =>
+      request<GuardianBinding[]>(`${BASE_URL}/bindings/protected-users?guardianId=${guardianId}`, { headers: authHeaders() }),
+
+    listGuardians: (protectedUserId: number) =>
+      request<GuardianBinding[]>(`${BASE_URL}/bindings/guardians?protectedUserId=${protectedUserId}`, { headers: authHeaders() }),
+  },
+
+  // ======================== alerts ========================
+  alerts: {
+    create: (dto: { protectedUserId: number; type: string; severity: string; title: string; message: string }) =>
+      request<Alert>(
+        `${BASE_URL}/alerts`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify(dto) }
+      ),
+
+    listForGuardian: (guardianId: number) =>
+      request<Alert[]>(`${BASE_URL}/alerts/guardian?guardianId=${guardianId}`, { headers: authHeaders() }),
+
+    listForProtectedUser: (protectedUserId: number) =>
+      request<Alert[]>(`${BASE_URL}/alerts/protected-user?protectedUserId=${protectedUserId}`, { headers: authHeaders() }),
+
+    markRead: (id: number) =>
+      request<Alert>(`${BASE_URL}/alerts/${id}/read`, { method: 'PUT', headers: authHeaders() }),
+
+    resolve: (id: number) =>
+      request<Alert>(`${BASE_URL}/alerts/${id}/resolve`, { method: 'PUT', headers: authHeaders() }),
+
+    unreadCount: (guardianId: number) =>
+      request<number>(`${BASE_URL}/alerts/count?guardianId=${guardianId}`, { headers: authHeaders() }),
+  },
+
+  // ======================== filters ========================
+  filters: {
+    add: (userId: number, category: string, pattern: string, action: string, priority?: number) =>
+      request<ContentFilterRule>(
+        `${BASE_URL}/filters`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId: String(userId), category, pattern, action, priority: String(priority || 1) }) }
+      ),
+
+    list: (userId: number, category?: string) => {
+      let url = `${BASE_URL}/filters?userId=${userId}`
+      if (category) url += `&category=${category}`
+      return request<ContentFilterRule[]>(url, { headers: authHeaders() })
+    },
+
+    remove: (id: number) =>
+      request<void>(`${BASE_URL}/filters/${id}`, { method: 'DELETE', headers: authHeaders() }),
+  },
+
+  // ======================== biometrics ========================
+  biometrics: {
+    register: (userId: number, type: string, confidenceThreshold?: number) =>
+      request<BiometricRecord>(
+        `${BASE_URL}/biometrics`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId, type, confidenceThreshold: confidenceThreshold || 0.85 }) }
+      ),
+
+    list: (userId: number) =>
+      request<BiometricRecord[]>(`${BASE_URL}/biometrics?userId=${userId}`, { headers: authHeaders() }),
+
+    setStatus: (id: number, active: boolean) =>
+      request<BiometricRecord>(`${BASE_URL}/biometrics/${id}/status?active=${active}`, { method: 'PUT', headers: authHeaders() }),
+
+    verify: (userId: number, type: string) =>
+      request<boolean>(
+        `${BASE_URL}/biometrics/verify`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId: String(userId), type }) }
+      ),
+  },
+
+  // ======================== auditLogs ========================
+  auditLogs: {
+    listByUser: (userId: number) =>
+      request<AuditLogEntry[]>(`${BASE_URL}/audit-logs/user?userId=${userId}`, { headers: authHeaders() }),
+
+    listAll: () =>
+      request<AuditLogEntry[]>(`${BASE_URL}/audit-logs`, { headers: authHeaders() }),
+  },
 }
