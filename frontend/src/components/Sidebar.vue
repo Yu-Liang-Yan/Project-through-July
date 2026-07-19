@@ -48,7 +48,7 @@ const userTypeLabel = computed(() => {
 <template>
   <aside
     :class="[
-      'fixed lg:sticky top-0 left-0 h-screen w-64 bg-gray-800 text-white flex flex-col transition-all duration-300 z-40',
+      'fixed top-0 left-0 h-screen w-64 bg-gray-800 text-white flex flex-col transition-all duration-300 z-40',
       isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
     ]"
   >
