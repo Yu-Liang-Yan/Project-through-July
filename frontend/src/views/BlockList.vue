@@ -25,6 +25,7 @@ const tabs = [
 const currentList = computed(() => blockData.value[activeTab.value] || []);
 
 const { toast } = useToast()
+const loading = ref(true)
 
 const loadBlockList = async (type: string) => {
   const uid = userStore.currentUser?.id ?? 1;
@@ -77,6 +78,7 @@ onMounted(async () => {
     return;
   }
   await Promise.all([loadBlockList('websites'), loadBlockList('games'), loadBlockList('apps')]);
+  loading.value = false
 });
 </script>
 
@@ -86,6 +88,12 @@ onMounted(async () => {
     <div class="lg:ml-64">
       <Header title="禁止列表" subtitle="管理禁止访问的网站、游戏和应用" />
 
+      <div v-if="loading" class="text-center py-16 text-gray-500">
+        <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+        <p>加载禁止列表...</p>
+      </div>
+
+      <template v-else>
       <div class="flex border-b border-gray-200 mb-6">
         <button
           v-for="tab in tabs"
@@ -159,6 +167,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </main>
+      </template>
+    </div>
   </div>
 </template>

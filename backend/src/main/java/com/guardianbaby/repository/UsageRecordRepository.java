@@ -21,4 +21,9 @@ public interface UsageRecordRepository extends JpaRepository<UsageRecord, Long> 
     Long sumDurationSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 
     long countByUserId(Long userId);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM UsageRecord u WHERE u.user.id = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 }

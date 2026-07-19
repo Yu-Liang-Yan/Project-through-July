@@ -32,9 +32,11 @@ public class StatisticsServiceImpl implements StatisticsService {
     public DashboardResponse getDashboard(Long userId) {
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         LocalDateTime weekStart = LocalDate.now().minusDays(7).atStartOfDay();
+        LocalDateTime monthStart = LocalDate.now().minusDays(30).atStartOfDay();
 
         Long todayUsage = usageRecordRepository.sumDurationSince(userId, todayStart);
         Long weekUsage = usageRecordRepository.sumDurationSince(userId, weekStart);
+        Long monthUsage = usageRecordRepository.sumDurationSince(userId, monthStart);
         Long deviceCount = deviceRepository.countByOwnerId(userId);
         Long bindingCount = bindingRepository.countByGuardianId(userId);
 
@@ -62,6 +64,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         return DashboardResponse.builder()
                 .todayUsage(todayUsage)
                 .weekUsage(weekUsage)
+                .monthUsage(monthUsage)
                 .deviceCount(deviceCount)
                 .alertCount(alertCount)
                 .bindingCount(bindingCount)

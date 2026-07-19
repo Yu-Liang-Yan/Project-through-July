@@ -11,6 +11,7 @@ import { Users, UserCircle, Shield, Clock, Phone, Activity } from '@lucide/vue'
 const router = useRouter()
 const userStore = useUserStore()
 const protectedUsers = ref<GuardianBinding[]>([])
+const guardians = ref<GuardianBinding[]>([])
 const loading = ref(true)
 
 const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
@@ -27,6 +28,9 @@ const loadData = async () => {
     if (isGuardian.value) {
       const res = await api.bindings.listProtectedUsers(uid)
       if (res.success && res.data) protectedUsers.value = res.data
+    } else {
+      const res = await api.bindings.listGuardians(uid)
+      if (res.success && res.data) guardians.value = res.data
     }
   } catch (e) {
     console.error(e)
@@ -121,19 +125,44 @@ onMounted(async () => {
 
         <!-- 被保护用户视角 -->
         <template v-else>
-          <div class="bg-white rounded-xl shadow-sm p-6 max-w-md mx-auto">
-            <div class="text-center mb-4">
-              <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <UserCircle class="w-8 h-8 text-green-600" />
+          <div class="max-w-md mx-auto space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+              <div class="text-center mb-4">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <UserCircle class="w-8 h-8 text-green-600" />
+                </div>
+                <h3 class="text-lg font-semibold text-gray-800">{{ userStore.currentUser?.username }}</h3>
+                <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                  {{ ageGroupLabel(userStore.currentUser?.ageGroup) }}
+                </span>
               </div>
-              <h3 class="text-lg font-semibold text-gray-800">{{ userStore.currentUser?.username }}</h3>
-              <span class="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
-                {{ ageGroupLabel(userStore.currentUser?.ageGroup) }}
-              </span>
+              <div class="space-y-3 text-sm text-center text-gray-600">
+                <p>手机号：{{ userStore.currentUser?.phone }}</p>
+                <p>注册时间：{{ userStore.currentUser?.createdAt?.substring(0, 10) }}</p>
+              </div>
             </div>
-            <div class="space-y-3 text-sm text-center text-gray-600">
-              <p>手机号：{{ userStore.currentUser?.phone }}</p>
-              <p>注册时间：{{ userStore.currentUser?.createdAt?.substring(0, 10) }}</p>
+
+            <!-- 绑定的监护人 -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+              <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Shield class="w-5 h-5 text-primary-600" /> 我的监护人
+              </h3>
+              <div v-if="guardians.length === 0" class="text-center py-6 text-gray-400">
+                <Users class="w-10 h-10 mx-auto mb-2" />
+                <p class="text-sm">暂无绑定监护人</p>
+              </div>
+              <div v-else class="space-y-3">
+                <div v-for="g in guardians" :key="g.id" class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div class="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
+                    <Shield class="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-medium text-gray-800">{{ g.guardianName }}</p>
+                    <p class="text-xs text-gray-500">绑定于 {{ g.createdAt?.substring(0, 10) }}</p>
+                  </div>
+                  <span class="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">活跃</span>
+                </div>
+              </div>
             </div>
           </div>
         </template>

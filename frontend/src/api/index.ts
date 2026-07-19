@@ -256,4 +256,13 @@ export const api = {
     listAll: () =>
       request<AuditLogEntry[]>(`${BASE_URL}/audit-logs`, { headers: authHeaders() }),
   },
+
+  // ======================== data ========================
+  data: {
+    export: (userId: number) =>
+      request<Record<string, any>>(`${BASE_URL}/data/export?userId=${userId}`, { headers: authHeaders() }),
+
+    clear: (userId: number) =>
+      request<Record<string, number>>(`${BASE_URL}/data/clear?userId=${userId}`, { method: 'DELETE', headers: authHeaders() }),
+  },
 }

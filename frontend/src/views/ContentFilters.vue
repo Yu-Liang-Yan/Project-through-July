@@ -6,12 +6,13 @@ import { api } from '@/api'
 import type { ContentFilterRule } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
-import { Filter, Plus, Trash2, AlertTriangle } from '@lucide/vue'
+import { Filter, Plus, Trash2, AlertTriangle, Activity } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
 const rules = ref<ContentFilterRule[]>([])
+const loading = ref(true)
 const activeCategory = ref('ALL')
 const newPattern = ref('')
 const newAction = ref('BLOCK')
@@ -82,6 +83,7 @@ onMounted(async () => {
     return
   }
   await loadRules()
+  loading.value = false
 })
 </script>
 
@@ -91,6 +93,12 @@ onMounted(async () => {
     <div class="lg:ml-64">
       <Header title="内容过滤" subtitle="配置网站/关键词/应用过滤规则" />
 
+      <div v-if="loading" class="text-center py-16 text-gray-500">
+        <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+        <p>加载过滤规则...</p>
+      </div>
+
+      <template v-else>
       <div class="p-6 space-y-6">
         <!-- 添加规则 -->
         <div class="bg-white rounded-xl shadow-sm p-6">
@@ -196,6 +204,7 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+      </template>
     </div>
   </div>
 </template>

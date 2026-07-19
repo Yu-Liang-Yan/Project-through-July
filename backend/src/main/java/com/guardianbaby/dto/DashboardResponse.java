@@ -15,6 +15,7 @@ public class DashboardResponse {
 
     private Long todayUsage;  // 秒
     private Long weekUsage;   // 秒
+    private Long monthUsage;  // 秒
     private Long deviceCount;
     private Long alertCount;
     private Long bindingCount;

@@ -39,6 +39,60 @@ const getBiometricStatus = (type: string) => {
 
 const { toast } = useToast()
 
+// Security toggles with localStorage persistence
+const securitySettings = ref({
+  twoFactor: localStorage.getItem('security_twoFactor') !== 'false',
+  antiTamper: localStorage.getItem('security_antiTamper') !== 'false',
+  autoAlert: localStorage.getItem('security_autoAlert') !== 'false'
+})
+
+const toggleSecurity = (key: 'twoFactor' | 'antiTamper' | 'autoAlert') => {
+  securitySettings.value[key] = !securitySettings.value[key]
+  localStorage.setItem(`security_${key}`, String(securitySettings.value[key]))
+}
+
+// Data management: track which action to perform after password verification
+const pendingAction = ref<'export' | 'clear' | null>(null)
+
+const handleExport = async () => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.data.export(uid)
+    if (res.success && res.data) {
+      const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `guardian-baby-export-${new Date().toISOString().slice(0, 10)}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast('诊断信息包已导出', 'success')
+    }
+  } catch (e) { toast('导出失败', 'error') }
+}
+
+const handleClear = async () => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.data.clear(uid)
+    if (res.success) {
+      toast(`已清除 ${(res.data as any)?.usageRecordsDeleted || 0} 条使用记录`, 'success')
+    }
+  } catch (e) { toast('清除失败', 'error') }
+}
+
+const verifyPasswordThenAct = async (action: () => void) => {
+  if (!passwordInput.value) { toast('请输入密码', 'warning'); return }
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.auth.verifyPassword(uid, passwordInput.value)
+    if (res.success && res.data) {
+      passwordInput.value = ''; showPasswordVerify.value = false
+      action()
+    } else { toast('密码验证失败', 'error') }
+  } catch (e) { toast('验证失败', 'error') }
+}
+
 const loadBiometrics = async () => {
   const uid = userStore.currentUser?.id ?? 1
   try {
@@ -96,18 +150,6 @@ const handleSaveProfile = async () => {
       toast(res.message || '更新失败', 'error')
     }
   } catch (e) { toast('更新失败', 'error') }
-}
-
-const verifyPasswordThenAct = async (action: () => void) => {
-  if (!passwordInput.value) { toast('请输入密码', 'warning'); return }
-  const uid = userStore.currentUser?.id ?? 1
-  try {
-    const res = await api.auth.verifyPassword(uid, passwordInput.value)
-    if (res.success && res.data) {
-      passwordInput.value = ''; showPasswordVerify.value = false
-      action()
-    } else { toast('密码验证失败', 'error') }
-  } catch (e) { toast('验证失败', 'error') }
 }
 
 onMounted(async () => {
@@ -183,18 +225,21 @@ onMounted(async () => {
             <Shield class="w-5 h-5 text-primary-600" /> 安全设置
           </h3>
           <div class="space-y-4">
-            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+            <button @click="toggleSecurity('twoFactor')" class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div><p class="font-medium text-gray-800">双重验证</p><p class="text-sm text-gray-500">修改管控规则需要密码 + 生物特征双重确认</p></div>
-              <ToggleRight class="w-7 h-7 text-green-500" />
-            </div>
-            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <ToggleRight v-if="securitySettings.twoFactor" class="w-7 h-7 text-green-500" />
+              <ToggleLeft v-else class="w-7 h-7" />
+            </button>
+            <button @click="toggleSecurity('antiTamper')" class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div><p class="font-medium text-gray-800">防反控制</p><p class="text-sm text-gray-500">连续验证失败自动锁定设备</p></div>
-              <ToggleRight class="w-7 h-7 text-green-500" />
-            </div>
-            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <ToggleRight v-if="securitySettings.antiTamper" class="w-7 h-7 text-green-500" />
+              <ToggleLeft v-else class="w-7 h-7" />
+            </button>
+            <button @click="toggleSecurity('autoAlert')" class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div><p class="font-medium text-gray-800">自动告警</p><p class="text-sm text-gray-500">检测到禁止操作时自动告警</p></div>
-              <ToggleRight class="w-7 h-7 text-green-500" />
-            </div>
+              <ToggleRight v-if="securitySettings.autoAlert" class="w-7 h-7 text-green-500" />
+              <ToggleLeft v-else class="w-7 h-7" />
+            </button>
           </div>
         </div>
 
@@ -273,7 +318,7 @@ onMounted(async () => {
           <input v-model="passwordInput" type="password" placeholder="输入密码" class="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 outline-none focus:ring-2 focus:ring-primary-500" />
           <div class="flex gap-3">
             <button @click="showPasswordVerify = false; passwordInput = ''" class="flex-1 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50">取消</button>
-            <button @click="verifyPasswordThenAct(() => toast('操作已确认', 'success'))" class="flex-1 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">确认</button>
+            <button @click="verifyPasswordThenAct(pendingAction === 'export' ? handleExport : handleClear)" class="flex-1 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700">确认</button>
           </div>
         </div>
       </div>

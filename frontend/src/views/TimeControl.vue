@@ -6,7 +6,7 @@ import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { useToast } from '@/composables/useToast'
-import { Clock, Save, ChevronDown, ChevronUp } from '@lucide/vue'
+import { Clock, Save, ChevronDown, ChevronUp, Activity } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,6 +16,7 @@ const expandedSections = ref({
   timeRange: true,
   periodLimit: true
 })
+const loading = ref(true)
 
 const toggleSection = (section: string) => {
   expandedSections.value[section as keyof typeof expandedSections.value] = !expandedSections.value[section as keyof typeof expandedSections.value]
@@ -32,20 +33,22 @@ const timeSettings = ref({
 
 const { toast } = useToast()
 
+const usage = ref({ today: 0, week: 0, month: 0 })
+
 const usageProgress = computed(() => {
   const dailyMins = timeSettings.value.dailyHours * 60 + timeSettings.value.dailyMinutes
-  const todayUsed = Math.round(Math.random() * dailyMins)
-  const weekUsed = Math.round(Math.random() * timeSettings.value.weeklyLimit)
-  const monthUsed = Math.round(Math.random() * timeSettings.value.monthlyLimit)
+  const todayMin = Math.round((usage.value.today || 0) / 60)
+  const weekHr = Math.round((usage.value.week || 0) / 3600)
+  const monthHr = Math.round((usage.value.month || 0) / 3600)
   return {
-    dailyPct: dailyMins > 0 ? Math.min(100, Math.round((todayUsed / dailyMins) * 100)) : 0,
-    dailyUsed: todayUsed,
+    dailyPct: dailyMins > 0 ? Math.min(100, Math.round((todayMin / dailyMins) * 100)) : 0,
+    dailyUsed: todayMin,
     dailyMax: dailyMins,
-    weeklyPct: timeSettings.value.weeklyLimit > 0 ? Math.min(100, Math.round((weekUsed / timeSettings.value.weeklyLimit) * 100)) : 0,
-    weeklyUsed: weekUsed,
+    weeklyPct: timeSettings.value.weeklyLimit > 0 ? Math.min(100, Math.round((weekHr / timeSettings.value.weeklyLimit) * 100)) : 0,
+    weeklyUsed: weekHr,
     weeklyMax: timeSettings.value.weeklyLimit,
-    monthlyPct: timeSettings.value.monthlyLimit > 0 ? Math.min(100, Math.round((monthUsed / timeSettings.value.monthlyLimit) * 100)) : 0,
-    monthlyUsed: monthUsed,
+    monthlyPct: timeSettings.value.monthlyLimit > 0 ? Math.min(100, Math.round((monthHr / timeSettings.value.monthlyLimit) * 100)) : 0,
+    monthlyUsed: monthHr,
     monthlyMax: timeSettings.value.monthlyLimit,
   }
 })
@@ -72,19 +75,31 @@ onMounted(async () => {
   }
   const uid = userStore.currentUser?.id ?? 1
   try {
-    const res = await api.timeSettings.get(uid)
-    if (res.success && res.data) {
+    const [tsRes, dashRes] = await Promise.all([
+      api.timeSettings.get(uid),
+      api.statistics.dashboard(uid)
+    ])
+    if (tsRes.success && tsRes.data) {
       timeSettings.value = {
-        dailyHours: res.data.dailyHours,
-        dailyMinutes: res.data.dailyMinutes,
-        startTime: res.data.startTime,
-        endTime: res.data.endTime,
-        weeklyLimit: res.data.weeklyLimit,
-        monthlyLimit: res.data.monthlyLimit
+        dailyHours: tsRes.data.dailyHours,
+        dailyMinutes: tsRes.data.dailyMinutes,
+        startTime: tsRes.data.startTime,
+        endTime: tsRes.data.endTime,
+        weeklyLimit: tsRes.data.weeklyLimit,
+        monthlyLimit: tsRes.data.monthlyLimit
+      }
+    }
+    if (dashRes.success && dashRes.data) {
+      usage.value = {
+        today: dashRes.data.todayUsage ?? 0,
+        week: dashRes.data.weekUsage ?? 0,
+        month: (dashRes.data as any).monthUsage ?? 0
       }
     }
   } catch (e) {
     console.error(e)
+  } finally {
+    loading.value = false
   }
 })
 </script>
@@ -96,6 +111,12 @@ onMounted(async () => {
       <Header title="时间控制" subtitle="设置设备使用时间限制" />
 
       <div class="max-w-3xl mx-auto">
+        <div v-if="loading" class="text-center py-16 text-gray-500">
+          <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+          <p>加载时间设置...</p>
+        </div>
+
+        <template v-else>
         <!-- 用量概览 -->
         <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-4">
           <h3 class="text-lg font-semibold text-gray-800 mb-4">用量概览</h3>
@@ -280,6 +301,7 @@ onMounted(async () => {
             保存设置
           </button>
         </div>
+        </template>
       </div>
     </div>
   </div>

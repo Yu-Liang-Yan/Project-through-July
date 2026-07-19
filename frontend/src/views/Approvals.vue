@@ -16,6 +16,7 @@ const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian'
 const pendingRequests = ref<ApprovalRequest[]>([])
 const myRequests = ref<ApprovalRequest[]>([])
 const loading = ref(false)
+const pendingCount = ref(0)
 
 const showForm = ref(false)
 const requestType = ref<'TIME_EXTENSION' | 'UNBLOCK'>('TIME_EXTENSION')
@@ -48,8 +49,12 @@ const loadData = async () => {
   try {
     if (isGuardian.value) {
       const uid = userStore.currentUser?.id ?? 1
-      const res = await api.approvals.pending(uid)
-      pendingRequests.value = res.data || []
+      const [pendingRes, countRes] = await Promise.all([
+        api.approvals.pending(uid),
+        api.approvals.pendingCount()
+      ])
+      pendingRequests.value = pendingRes.data || []
+      pendingCount.value = (countRes.data as number) || 0
     } else {
       const uid = userStore.currentUser?.id ?? 2
       const res = await api.approvals.myRequests(uid)
@@ -120,6 +125,11 @@ onMounted(async () => {
     <Sidebar />
     <div class="lg:ml-64">
       <Header title="请求审批" :subtitle="isGuardian ? '审批被保护用户的请求' : '查看我的请求状态'" />
+      <div v-if="isGuardian && pendingCount > 0" class="px-4 md:px-6 mb-4">
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-700 text-sm font-medium">
+          <Clock class="w-4 h-4" /> {{ pendingCount }} 个待审批
+        </span>
+      </div>
 
       <div class="p-6 space-y-6">
         <!-- 头部操作栏 -->
