@@ -2,14 +2,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useSettingsStore } from '@/stores/settings'
+import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Clock, Save, ChevronDown, ChevronUp } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const settingsStore = useSettingsStore()
 
 const expandedSections = ref({
   dailyLimit: true,
@@ -30,31 +29,45 @@ const timeSettings = ref({
   monthlyLimit: 60
 })
 
-const saveSettings = () => {
-  settingsStore.setTimeSettings({
-    id: 0,
-    ...timeSettings.value
-  })
-  ;(window as any).showToast('时间设置已保存', 'success')
+const toast = (msg: string, type: string) => {
+  ;(window as any).showToast?.(msg, type)
 }
 
-onMounted(() => {
+const saveSettings = async () => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.timeSettings.update(uid, timeSettings.value)
+    if (res.success) {
+      toast('时间设置已保存', 'success')
+    } else {
+      toast(res.message || '保存失败', 'error')
+    }
+  } catch (e) {
+    toast('保存失败，请重试', 'error')
+  }
+}
+
+onMounted(async () => {
   userStore.loadFromStorage()
-  settingsStore.loadFromStorage()
-  
   if (!userStore.isLoggedIn) {
     router.push('/')
     return
   }
-  
-  const saved = settingsStore.timeSettings
-  timeSettings.value = {
-    dailyHours: saved.dailyHours,
-    dailyMinutes: saved.dailyMinutes,
-    startTime: saved.startTime,
-    endTime: saved.endTime,
-    weeklyLimit: saved.weeklyLimit,
-    monthlyLimit: saved.monthlyLimit
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.timeSettings.get(uid)
+    if (res.success && res.data) {
+      timeSettings.value = {
+        dailyHours: res.data.dailyHours,
+        dailyMinutes: res.data.dailyMinutes,
+        startTime: res.data.startTime,
+        endTime: res.data.endTime,
+        weeklyLimit: res.data.weeklyLimit,
+        monthlyLimit: res.data.monthlyLimit
+      }
+    }
+  } catch (e) {
+    console.error(e)
   }
 })
 </script>

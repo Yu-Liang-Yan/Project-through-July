@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { api } from '@/api'
 import { Shield, User, Lock, Phone, Camera, Fingerprint, Mic, Eye, EyeOff } from '@lucide/vue'
 
 const router = useRouter()
@@ -9,6 +10,7 @@ const userStore = useUserStore()
 
 const activeTab = ref<'login' | 'register'>('login')
 const showPassword = ref(false)
+const loading = ref(false)
 
 const loginForm = ref({
   username: '',
@@ -31,56 +33,95 @@ onMounted(() => {
   }
 })
 
-const handleLogin = () => {
+const toast = (msg: string, type: string) => {
+  ;(window as any).showToast?.(msg, type)
+}
+
+const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {
-    ;(window as any).showToast('请填写完整信息', 'warning')
+    toast('请填写完整信息', 'warning')
     return
   }
 
-  if (loginForm.value.username === 'admin' && loginForm.value.password === '123456') {
-    userStore.login({
-      id: 1,
-      username: loginForm.value.username,
-      phone: '13800138000',
-      userType: 'guardian',
-      createdAt: new Date().toISOString()
-    })
-    ;(window as any).showToast('登录成功！', 'success')
-    router.push('/dashboard')
-  } else {
-    ;(window as any).showToast('用户名或密码错误', 'error')
+  loading.value = true
+  try {
+    const res = await api.auth.login(loginForm.value.username, loginForm.value.password)
+    if (res.success && res.data) {
+      const d = res.data
+      userStore.login({
+        id: d.id,
+        username: d.username,
+        phone: d.phone,
+        userType: d.userType.toLowerCase() as 'guardian' | 'protected',
+        ageGroup: d.ageGroup,
+        createdAt: d.createdAt
+      }, d.token)
+      toast('登录成功！', 'success')
+      router.push('/dashboard')
+    } else {
+      toast(res.message || '登录失败', 'error')
+    }
+  } catch (e) {
+    toast('网络错误，请稍后重试', 'error')
+  } finally {
+    loading.value = false
   }
 }
 
-const handleRegister = () => {
+const handleRegister = async () => {
   if (!registerForm.value.username || !registerForm.value.phone || !registerForm.value.password) {
-    ;(window as any).showToast('请填写完整信息', 'warning')
+    toast('请填写完整信息', 'warning')
     return
   }
-
   if (registerForm.value.password !== registerForm.value.confirmPassword) {
-    ;(window as any).showToast('两次密码不一致', 'error')
+    toast('两次密码不一致', 'error')
     return
   }
 
-  userStore.login({
-    id: Date.now(),
-    username: registerForm.value.username,
-    phone: registerForm.value.phone,
-    userType: registerForm.value.userType,
-    ageGroup: registerForm.value.ageGroup,
-    createdAt: new Date().toISOString()
-  })
-  ;(window as any).showToast('注册成功！', 'success')
-  router.push('/dashboard')
+  const ageGroupMap: Record<string, string> = {
+    '6岁以下': '0-6', '6-12岁': '6-12', '12-15岁': '12-15', '15-18岁': '15-18'
+  }
+
+  loading.value = true
+  try {
+    const res = await api.auth.register({
+      username: registerForm.value.username,
+      phone: registerForm.value.phone,
+      password: registerForm.value.password,
+      userType: registerForm.value.userType.toUpperCase(),
+      ageGroup: registerForm.value.userType === 'protected' ? (ageGroupMap[registerForm.value.ageGroup] || '') : undefined
+    })
+    if (res.success && res.data) {
+      // 注册后自动登录
+      const loginRes = await api.auth.login(registerForm.value.username, registerForm.value.password)
+      if (loginRes.success && loginRes.data) {
+        userStore.login({
+          id: loginRes.data.id,
+          username: loginRes.data.username,
+          phone: loginRes.data.phone,
+          userType: loginRes.data.userType.toLowerCase() as 'guardian' | 'protected',
+          ageGroup: loginRes.data.ageGroup,
+          createdAt: loginRes.data.createdAt
+        }, loginRes.data.token)
+        toast('注册成功！', 'success')
+        router.push('/dashboard')
+      }
+    } else {
+      toast(res.message || '注册失败', 'error')
+    }
+  } catch (e) {
+    toast('网络错误，请稍后重试', 'error')
+  } finally {
+    loading.value = false
+  }
 }
 
 const startBiometric = (type: string) => {
   if (!loginForm.value.username) {
-    ;(window as any).showToast('请先输入用户名', 'warning')
+    toast('请先输入用户名', 'warning')
     return
   }
-  ;(window as any).showToast(`${type === 'face' ? '人脸' : type === 'fingerprint' ? '指纹' : '声纹'}识别中...`, 'info')
+  toast(`${type === 'face' ? '人脸' : type === 'fingerprint' ? '指纹' : '声纹'}识别中...`, 'info')
   setTimeout(() => {
     userStore.login({
       id: 1,
@@ -88,8 +129,8 @@ const startBiometric = (type: string) => {
       phone: '13800138000',
       userType: 'guardian',
       createdAt: new Date().toISOString()
-    })
-    ;(window as any).showToast('生物识别验证成功！', 'success')
+    }, '')
+    toast('生物识别验证成功！', 'success')
     router.push('/dashboard')
   }, 2000)
 }
@@ -186,9 +227,10 @@ const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
 
         <button
           @click="handleLogin"
-          class="w-full py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors"
+          :disabled="loading"
+          class="w-full py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
         >
-          登录
+          {{ loading ? '登录中...' : '登录' }}
         </button>
 
         <p class="text-center text-sm text-gray-500">
@@ -278,9 +320,10 @@ const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
 
         <button
           @click="handleRegister"
-          class="w-full py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors"
+          :disabled="loading"
+          class="w-full py-3 bg-primary-500 text-white font-medium rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
         >
-          注册
+          {{ loading ? '注册中...' : '注册' }}
         </button>
       </div>
     </div>

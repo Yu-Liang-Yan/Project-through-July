@@ -1,11 +1,14 @@
 <script setup lang="ts">import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
+import { api } from '@/api';
+import type { UsageRecord } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
 import { Bar } from 'vue-chartjs';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
 const router = useRouter();
 const userStore = useUserStore();
 const activePeriod = ref<'day' | 'week' | 'month'>('day');
@@ -14,6 +17,8 @@ const periods = [
  { value: 'week', label: '本周' },
  { value: 'month', label: '本月' }
 ];
+const usageRecords = ref<UsageRecord[]>([]);
+
 const chartData = computed(() => {
  const labels = activePeriod.value === 'day'
  ? ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00']
@@ -35,47 +40,48 @@ const chartData = computed(() => {
  ]
  };
 });
+
 const chartOptions = {
  responsive: true,
  maintainAspectRatio: false,
  plugins: {
- legend: {
- position: 'top' as const
- }
+ legend: { position: 'top' as const }
  },
  scales: {
  y: {
  beginAtZero: true,
- ticks: {
- callback: (value: number | string) => `${value}分钟`
- }
+ ticks: { callback: (value: number | string) => `${value}分钟` }
  }
  }
 };
-const usageRecords = ref([
- { id: 1, date: '2024-01-15', device: '小明的手机', app: '抖音', startTime: '09:30', endTime: '10:00', duration: '30分钟' },
- { id: 2, date: '2024-01-15', device: '客厅电脑', app: '作业帮', startTime: '14:00', endTime: '14:45', duration: '45分钟' },
- { id: 3, date: '2024-01-15', device: '平板设备', app: '王者荣耀', startTime: '16:00', endTime: '17:00', duration: '1小时' },
- { id: 4, date: '2024-01-14', device: '小明的手机', app: '快手', startTime: '20:00', endTime: '20:20', duration: '20分钟' },
- { id: 5, date: '2024-01-14', device: '客厅电脑', app: '浏览器', startTime: '19:00', endTime: '19:15', duration: '15分钟' }
-]);
+
 const totalUsage = computed(() => {
- const minutes = usageRecords.value.reduce((sum, record) => {
- const match = record.duration.match(/(\d+)小时?/);
- const hours = match ? parseInt(match[1]) * 60 : 0;
- const match2 = record.duration.match(/(\d+)分钟?/);
- const mins = match2 ? parseInt(match2[1]) : 0;
- return sum + hours + mins;
- }, 0);
- const hours = Math.floor(minutes / 60);
- const mins = minutes % 60;
+ let totalMin = 0;
+ usageRecords.value.forEach(r => { totalMin += Math.round((r.duration || 0) / 60); });
+ const hours = Math.floor(totalMin / 60);
+ const mins = totalMin % 60;
  return `${hours}小时${mins}分钟`;
 });
-onMounted(() => {
+
+const loadRecords = async () => {
+  const uid = userStore.currentUser?.id ?? 1;
+  try {
+    const res = await api.statistics.usage(uid, activePeriod.value);
+    if (res.success && res.data) {
+      usageRecords.value = res.data;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+onMounted(async () => {
  userStore.loadFromStorage();
  if (!userStore.isLoggedIn) {
  router.push('/');
+ return;
  }
+ await loadRecords();
 });
 </script>
 
@@ -153,12 +159,12 @@ onMounted(() => {
                 :key="record.id"
                 class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
               >
-                <td class="py-3 px-4 text-sm text-gray-600">{{ record.date }}</td>
+                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.startTime).toLocaleDateString() }}</td>
                 <td class="py-3 px-4 text-sm text-gray-800">{{ record.device }}</td>
                 <td class="py-3 px-4 text-sm text-gray-800">{{ record.app }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ record.startTime }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ record.endTime }}</td>
-                <td class="py-3 px-4 text-sm text-gray-600">{{ record.duration }}</td>
+                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.startTime).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) }}</td>
+                <td class="py-3 px-4 text-sm text-gray-600">{{ new Date(record.endTime).toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' }) }}</td>
+                <td class="py-3 px-4 text-sm text-gray-600">{{ Math.round(record.duration / 60) }}分钟</td>
               </tr>
             </tbody>
           </table>

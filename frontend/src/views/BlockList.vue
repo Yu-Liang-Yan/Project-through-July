@@ -1,55 +1,83 @@
 <script setup lang="ts">import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUserStore } from '@/stores/user';
-import { useSettingsStore } from '@/stores/settings';
+import { api } from '@/api';
+import type { BlockItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
 import { Plus, Trash2, Globe, Gamepad2, Smartphone } from '@lucide/vue';
+
 const router = useRouter();
 const userStore = useUserStore();
-const settingsStore = useSettingsStore();
 const activeTab = ref<'websites' | 'games' | 'apps'>('websites');
 const newItem = ref('');
+const blockData = ref<{ websites: BlockItem[]; games: BlockItem[]; apps: BlockItem[] }>({
+  websites: [], games: [], apps: []
+});
+
 const tabs = [
  { value: 'websites', label: '网站', icon: Globe },
  { value: 'games', label: '游戏', icon: Gamepad2 },
  { value: 'apps', label: '应用', icon: Smartphone }
 ];
-const currentList = computed(() => {
- return settingsStore.blockList[activeTab.value] || [];
-});
-const addBlockItem = () => {
- if (!newItem.value.trim()) {
- (window as any).showToast('请输入要禁止的内容', 'warning');
- return;
- }
- const exists = currentList.value.some(item => item.name === newItem.value.trim());
- if (exists) {
- (window as any).showToast('该项目已在禁止列表中', 'error');
- return;
- }
- const item = {
- id: Date.now(),
- type: activeTab.value,
- name: newItem.value.trim(),
- createdAt: new Date().toISOString()
- };
- settingsStore.addBlockItem(activeTab.value, item);
- newItem.value = '';
- (window as any).showToast('已添加到禁止列表', 'success');
+
+const currentList = computed(() => blockData.value[activeTab.value] || []);
+
+const toast = (msg: string, type: string) => {
+  ;(window as any).showToast?.(msg, type)
 };
-const removeBlockItem = (id: number) => {
- if (confirm('确定要移除该禁止项吗？')) {
- settingsStore.removeBlockItem(activeTab.value, id);
- (window as any).showToast('已从禁止列表移除', 'info');
- }
+
+const loadBlockList = async (type: string) => {
+  const uid = userStore.currentUser?.id ?? 1;
+  try {
+    const res = await api.blockList.list(uid, type);
+    if (res.success && res.data) {
+      blockData.value[type as keyof typeof blockData.value] = res.data;
+    }
+  } catch (e) {
+    console.error(e);
+  }
 };
-onMounted(() => {
- userStore.loadFromStorage();
- settingsStore.loadFromStorage();
- if (!userStore.isLoggedIn) {
- router.push('/');
- }
+
+const addBlockItem = async () => {
+  if (!newItem.value.trim()) {
+    toast('请输入要禁止的内容', 'warning');
+    return;
+  }
+  const uid = userStore.currentUser?.id ?? 1;
+  try {
+    const res = await api.blockList.add(uid, activeTab.value, newItem.value.trim());
+    if (res.success) {
+      newItem.value = '';
+      toast('已添加到禁止列表', 'success');
+      await loadBlockList(activeTab.value);
+    } else {
+      toast(res.message || '添加失败', 'error');
+    }
+  } catch (e) {
+    toast('添加失败，请重试', 'error');
+  }
+};
+
+const removeBlockItem = async (id: number) => {
+  if (!confirm('确定要移除该禁止项吗？')) return;
+  const uid = userStore.currentUser?.id ?? 1;
+  try {
+    await api.blockList.remove(id, uid);
+    toast('已从禁止列表移除', 'info');
+    await loadBlockList(activeTab.value);
+  } catch (e) {
+    toast('移除失败', 'error');
+  }
+};
+
+onMounted(async () => {
+  userStore.loadFromStorage();
+  if (!userStore.isLoggedIn) {
+    router.push('/');
+    return;
+  }
+  await Promise.all([loadBlockList('websites'), loadBlockList('games'), loadBlockList('apps')]);
 });
 </script>
 

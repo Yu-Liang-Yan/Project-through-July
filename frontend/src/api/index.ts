@@ -1,4 +1,4 @@
-import type { User, Device, TimeSettings, BlockItem, UsageRecord } from '@/types'
+import type { Device, TimeSettings, BlockItem, UsageRecord, ApprovalRequest } from '@/types'
 
 const BASE_URL = '/api'
 
@@ -8,74 +8,120 @@ export interface ApiResponse<T> {
   data?: T
 }
 
+function getToken(): string | null {
+  return localStorage.getItem('token')
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
 export const api = {
   auth: {
-    login: (username: string, password: string): Promise<ApiResponse<User>> => {
+    login: (username: string, password: string): Promise<ApiResponse<{ id: number; username: string; phone: string; userType: string; ageGroup: string; token: string; createdAt: string }>> => {
       return fetch(`${BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
-      }).then(res => res.json())
+      }).then(r => r.json())
     },
-    register: (user: Omit<User, 'id'>): Promise<ApiResponse<User>> => {
+    register: (dto: { username: string; phone: string; password: string; userType: string; ageGroup?: string }): Promise<ApiResponse<{ id: number; username: string; phone: string; userType: string; ageGroup: string }>> => {
       return fetch(`${BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(user)
-      }).then(res => res.json())
+        body: JSON.stringify(dto)
+      }).then(r => r.json())
+    },
+    verifyPassword: (userId: number, password: string): Promise<ApiResponse<boolean>> => {
+      return fetch(`${BASE_URL}/auth/verify`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId, password })
+      }).then(r => r.json())
     }
   },
   devices: {
-    list: (): Promise<ApiResponse<Device[]>> => {
-      return fetch(`${BASE_URL}/devices`).then(res => res.json())
+    list: (userId: number): Promise<ApiResponse<Device[]>> => {
+      return fetch(`${BASE_URL}/devices?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
     },
-    scan: (): Promise<ApiResponse<Device[]>> => {
-      return fetch(`${BASE_URL}/devices/scan`, { method: 'POST' }).then(res => res.json())
-    },
-    add: (device: Omit<Device, 'id'>): Promise<ApiResponse<Device>> => {
-      return fetch(`${BASE_URL}/devices`, {
+    add: (userId: number, name: string, type: string): Promise<ApiResponse<Device>> => {
+      return fetch(`${BASE_URL}/devices?userId=${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(device)
-      }).then(res => res.json())
+        headers: authHeaders(),
+        body: JSON.stringify({ name, type })
+      }).then(r => r.json())
     },
-    remove: (id: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/devices/${id}`, { method: 'DELETE' }).then(res => res.json())
+    remove: (id: number, userId: number): Promise<ApiResponse<void>> => {
+      return fetch(`${BASE_URL}/devices/${id}?userId=${userId}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
     }
   },
   timeSettings: {
-    get: (): Promise<ApiResponse<TimeSettings>> => {
-      return fetch(`${BASE_URL}/time-settings`).then(res => res.json())
+    get: (userId: number): Promise<ApiResponse<TimeSettings>> => {
+      return fetch(`${BASE_URL}/time-settings?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
     },
-    update: (settings: TimeSettings): Promise<ApiResponse<TimeSettings>> => {
-      return fetch(`${BASE_URL}/time-settings`, {
+    update: (userId: number, settings: Partial<TimeSettings>): Promise<ApiResponse<TimeSettings>> => {
+      return fetch(`${BASE_URL}/time-settings?userId=${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify(settings)
-      }).then(res => res.json())
+      }).then(r => r.json())
     }
   },
   blockList: {
-    list: (type: string): Promise<ApiResponse<BlockItem[]>> => {
-      return fetch(`${BASE_URL}/block-list?type=${type}`).then(res => res.json())
+    list: (userId: number, type: string): Promise<ApiResponse<BlockItem[]>> => {
+      return fetch(`${BASE_URL}/block-list?userId=${userId}&type=${type}`, { headers: authHeaders() }).then(r => r.json())
     },
-    add: (item: BlockItem): Promise<ApiResponse<BlockItem>> => {
-      return fetch(`${BASE_URL}/block-list`, {
+    add: (userId: number, type: string, name: string): Promise<ApiResponse<BlockItem>> => {
+      return fetch(`${BASE_URL}/block-list?userId=${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item)
-      }).then(res => res.json())
+        headers: authHeaders(),
+        body: JSON.stringify({ type, name })
+      }).then(r => r.json())
     },
-    remove: (id: number): Promise<ApiResponse<void>> => {
-      return fetch(`${BASE_URL}/block-list/${id}`, { method: 'DELETE' }).then(res => res.json())
+    remove: (id: number, userId: number): Promise<ApiResponse<void>> => {
+      return fetch(`${BASE_URL}/block-list/${id}?userId=${userId}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
     }
   },
   statistics: {
-    usage: (period: string): Promise<ApiResponse<UsageRecord[]>> => {
-      return fetch(`${BASE_URL}/statistics/usage?period=${period}`).then(res => res.json())
+    usage: (userId: number, period: string): Promise<ApiResponse<UsageRecord[]>> => {
+      return fetch(`${BASE_URL}/statistics/usage?userId=${userId}&period=${period}`, { headers: authHeaders() }).then(r => r.json())
     },
-    dashboard: (): Promise<ApiResponse<{ todayUsage: number; weekUsage: number; deviceCount: number; alertCount: number }>> => {
-      return fetch(`${BASE_URL}/statistics/dashboard`).then(res => res.json())
+    dashboard: (userId: number): Promise<ApiResponse<{ todayUsage: number; weekUsage: number; deviceCount: number; alertCount: number }>> => {
+      return fetch(`${BASE_URL}/statistics/dashboard?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
+    }
+  },
+  approvals: {
+    submit: (dto: { requesterId: number; type: string; description: string; extraMinutes?: number; targetName?: string }): Promise<ApiResponse<ApprovalRequest>> => {
+      return fetch(`${BASE_URL}/approvals`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(dto)
+      }).then(r => r.json())
+    },
+    pending: (guardianId: number): Promise<ApiResponse<ApprovalRequest[]>> => {
+      return fetch(`${BASE_URL}/approvals/pending?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    myRequests: (requesterId: number): Promise<ApiResponse<ApprovalRequest[]>> => {
+      return fetch(`${BASE_URL}/approvals/my?requesterId=${requesterId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    approve: (id: number, reviewerId: number, message?: string): Promise<ApiResponse<ApprovalRequest>> => {
+      return fetch(`${BASE_URL}/approvals/${id}/approve?reviewerId=${reviewerId}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ message: message || '已同意' })
+      }).then(r => r.json())
+    },
+    reject: (id: number, reviewerId: number, reason?: string): Promise<ApiResponse<ApprovalRequest>> => {
+      return fetch(`${BASE_URL}/approvals/${id}/reject?reviewerId=${reviewerId}`, {
+        method: 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify({ reason: reason || '已拒绝' })
+      }).then(r => r.json())
     }
   }
 }

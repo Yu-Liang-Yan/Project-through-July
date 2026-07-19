@@ -6,6 +6,7 @@ import TimeControl from '@/views/TimeControl.vue'
 import BlockList from '@/views/BlockList.vue'
 import Statistics from '@/views/Statistics.vue'
 import Settings from '@/views/Settings.vue'
+import Approvals from '@/views/Approvals.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -47,6 +48,12 @@ const routes: RouteRecordRaw[] = [
     path: '/settings',
     name: 'Settings',
     component: Settings,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/approvals',
+    name: 'Approvals',
+    component: Approvals,
     meta: { requiresAuth: true }
   }
 ]

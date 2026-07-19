@@ -56,3 +56,17 @@ export interface DashboardStats {
   deviceCount: number
   alertCount: number
 }
+
+export interface ApprovalRequest {
+  id: number
+  type: 'TIME_EXTENSION' | 'UNBLOCK' | 'ACCESS'
+  description: string
+  extraMinutes?: number
+  targetName?: string
+  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  responseMessage?: string
+  requesterName: string
+  requesterId: number
+  createdAt: string
+  reviewedAt?: string
+}

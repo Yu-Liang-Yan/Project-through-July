@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useDevicesStore } from '@/stores/devices'
+import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw } from '@lucide/vue'
@@ -36,58 +37,75 @@ const getDeviceLabel = (type: string) => {
   return device ? device.label : type
 }
 
+const toast = (msg: string, type: string) => {
+  ;(window as any).showToast?.(msg, type)
+}
+
+const loadDevices = async () => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.devices.list(uid)
+    if (res.success && res.data) {
+      devicesStore.setDevices(res.data)
+    }
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 const scanDevices = async () => {
   isScanning.value = true
-  ;(window as any).showToast('正在扫描设备...', 'info')
-  
+  toast('正在扫描设备...', 'info')
   await new Promise(resolve => setTimeout(resolve, 2000))
-  
   const mockDevices = [
     { id: Date.now() + 1, name: '小明的手机', type: 'phone' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() },
     { id: Date.now() + 2, name: '客厅电脑', type: 'computer' as const, status: 'offline' as const, lastActive: new Date(Date.now() - 3600000).toISOString(), registeredAt: new Date().toISOString() },
     { id: Date.now() + 3, name: '平板设备', type: 'tablet' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() }
   ]
-  
   devicesStore.setDevices(mockDevices)
   isScanning.value = false
-  ;(window as any).showToast(`扫描完成，发现 ${mockDevices.length} 个设备`, 'success')
+  toast(`扫描完成，发现 ${mockDevices.length} 个设备`, 'success')
 }
 
-const addDevice = () => {
+const addDevice = async () => {
   if (!newDevice.value.name) {
-    ;(window as any).showToast('请输入设备名称', 'warning')
+    toast('请输入设备名称', 'warning')
     return
   }
-  
-  const device = {
-    id: Date.now(),
-    name: newDevice.value.name,
-    type: newDevice.value.type,
-    status: 'online' as const,
-    lastActive: new Date().toISOString(),
-    registeredAt: new Date().toISOString()
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.devices.add(uid, newDevice.value.name, newDevice.value.type)
+    if (res.success) {
+      toast('设备添加成功', 'success')
+      showAddModal.value = false
+      newDevice.value = { name: '', type: 'phone' }
+      await loadDevices()
+    }
+  } catch (e) {
+    toast('添加失败，请重试', 'error')
   }
-  
-  devicesStore.addDevice(device)
-  showAddModal.value = false
-  newDevice.value = { name: '', type: 'phone' }
-  ;(window as any).showToast('设备添加成功', 'success')
 }
 
-const removeDevice = (id: number) => {
-  if (confirm('确定要移除该设备吗？')) {
+const removeDevice = async (id: number) => {
+  if (!confirm('确定要移除该设备吗？')) return
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    await api.devices.remove(id, uid)
     devicesStore.removeDevice(id)
-    ;(window as any).showToast('设备已移除', 'info')
+    toast('设备已移除', 'info')
+  } catch (e) {
+    toast('移除失败', 'error')
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   userStore.loadFromStorage()
-  devicesStore.loadFromStorage()
-  
   if (!userStore.isLoggedIn) {
     router.push('/')
+    return
   }
+  devicesStore.loadFromStorage()
+  await loadDevices()
 })
 </script>
 

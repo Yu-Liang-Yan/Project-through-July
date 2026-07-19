@@ -66,4 +66,11 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
         return UserResponse.fromEntity(user);
     }
+
+    @Override
+    public boolean verifyPassword(Long userId, String password) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException("用户不存在"));
+        return passwordEncoder.matches(password, user.getPassword());
+    }
 }

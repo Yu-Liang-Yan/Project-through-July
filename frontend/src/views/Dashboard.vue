@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { useDevicesStore } from '@/stores/devices'
+import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import Card from '@/components/Card.vue'
@@ -10,33 +10,58 @@ import { Clock, Laptop, AlertTriangle, Calendar, ArrowRight } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
-const devicesStore = useDevicesStore()
+
+function formatDuration(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}
 
 const stats = ref({
-  todayUsage: '2h 30m',
-  deviceCount: 3,
+  todayUsage: '--',
+  deviceCount: 0,
   alertCount: 0,
-  weekUsage: '14h 20m'
+  weekUsage: '--'
 })
 
-const recentActivities = ref([
-  { id: 1, time: '10:30', device: '小明的手机', app: '抖音', duration: '30分钟', action: '正常使用' },
-  { id: 2, time: '09:15', device: '客厅电脑', app: '作业帮', duration: '45分钟', action: '正常使用' },
-  { id: 3, time: '昨天', device: '平板设备', app: '王者荣耀', duration: '1小时', action: '正常使用' },
-  { id: 4, time: '昨天', device: '小明的手机', app: '快手', duration: '20分钟', action: '正常使用' },
-  { id: 5, time: '前天', device: '客厅电脑', app: '浏览器', duration: '15分钟', action: '正常使用' }
-])
+const recentActivities = ref<{ id: number; time: string; device: string; app: string; duration: string; action: string }[]>([])
 
-onMounted(() => {
+onMounted(async () => {
   userStore.loadFromStorage()
-  devicesStore.loadFromStorage()
-  
   if (!userStore.isLoggedIn) {
     router.push('/')
     return
   }
-  
-  stats.value.deviceCount = devicesStore.devices.length
+
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const [dashRes, usageRes] = await Promise.all([
+      api.statistics.dashboard(uid),
+      api.statistics.usage(uid, 'day')
+    ])
+
+    if (dashRes.success && dashRes.data) {
+      stats.value = {
+        todayUsage: formatDuration(dashRes.data.todayUsage),
+        deviceCount: dashRes.data.deviceCount,
+        alertCount: dashRes.data.alertCount,
+        weekUsage: formatDuration(dashRes.data.weekUsage)
+      }
+    }
+
+    if (usageRes.success && usageRes.data) {
+      recentActivities.value = usageRes.data.slice(0, 10).map(r => ({
+        id: r.id as number,
+        time: new Date(r.startTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        device: r.device,
+        app: r.app,
+        duration: formatDuration(r.duration),
+        action: '正常使用'
+      }))
+    }
+  } catch (e) {
+    console.error('Dashboard fetch error:', e)
+  }
 })
 </script>
 

@@ -1,6 +1,8 @@
 package com.guardianbaby.config;
 
 import com.guardianbaby.entity.*;
+import com.guardianbaby.entity.ApprovalRequest.ApprovalStatus;
+import com.guardianbaby.entity.ApprovalRequest.ApprovalType;
 import com.guardianbaby.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,7 @@ public class DataInitializer implements CommandLineRunner {
     private final TimeSettingsRepository timeSettingsRepository;
     private final BlockItemRepository blockItemRepository;
     private final UsageRecordRepository usageRecordRepository;
+    private final ApprovalRequestRepository approvalRequestRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -31,7 +34,7 @@ public class DataInitializer implements CommandLineRunner {
 
         log.info("正在初始化演示数据...");
 
-        // 创建演示用户
+        // ── 创建用户 ──
         User guardian = User.builder()
                 .username("admin")
                 .password(passwordEncoder.encode("123456"))
@@ -41,16 +44,13 @@ public class DataInitializer implements CommandLineRunner {
                 .build();
         userRepository.save(guardian);
 
-        User child = User.builder()
-                .username("child")
-                .password(passwordEncoder.encode("123456"))
-                .phone("13800138001")
-                .userType(User.UserType.PROTECTED)
-                .ageGroup("12-15")
-                .build();
-        userRepository.save(child);
+        // 各年龄段被保护对象
+        User child0_6 = createChildUser("child06", "0-6");
+        User child6_12 = createChildUser("child612", "6-12");
+        User child12_15 = createChildUser("child", "12-15");
+        User child15_18 = createChildUser("child1518", "15-18");
 
-        // 创建演示设备
+        // ── 创建设备 ──
         deviceRepository.save(Device.builder()
                 .name("小明的手机").deviceType(Device.DeviceType.PHONE)
                 .status(Device.DeviceStatus.ONLINE).lastActive(LocalDateTime.now().minusMinutes(5))
@@ -64,14 +64,15 @@ public class DataInitializer implements CommandLineRunner {
                 .status(Device.DeviceStatus.ONLINE).lastActive(LocalDateTime.now().minusMinutes(30))
                 .owner(guardian).build());
 
-        // 创建时间设置
+        // ── 时间设置（年龄分层默认值由 TimeSettingsServiceImpl 自动推断） ──
+        // 监护人无年龄分层
         timeSettingsRepository.save(TimeSettings.builder()
                 .dailyHours(2).dailyMinutes(0)
                 .startTime("09:00").endTime("21:00")
                 .weeklyLimit(14).monthlyLimit(60)
                 .user(guardian).build());
 
-        // 创建禁止列表
+        // ── 禁止列表 ──
         blockItemRepository.save(BlockItem.builder()
                 .blockType(BlockItem.BlockType.WEBSITES).name("抖音").user(guardian).build());
         blockItemRepository.save(BlockItem.builder()
@@ -83,7 +84,7 @@ public class DataInitializer implements CommandLineRunner {
         blockItemRepository.save(BlockItem.builder()
                 .blockType(BlockItem.BlockType.APPS).name("小红书").user(guardian).build());
 
-        // 创建使用记录
+        // ── 使用记录 ──
         LocalDateTime now = LocalDateTime.now();
         String[] apps = {"浏览器", "学习软件", "微信", "视频App", "游戏"};
         int[] durations = {600, 1800, 300, 1200, 900};
@@ -95,10 +96,46 @@ public class DataInitializer implements CommandLineRunner {
                     .startTime(now.minusDays(i % 7).minusHours(i))
                     .endTime(now.minusDays(i % 7).minusHours(i).plusSeconds(durations[i % durations.length]))
                     .duration(durations[i % durations.length])
-                    .user(guardian)
+                    .user(child12_15)
                     .build());
         }
 
-        log.info("演示数据初始化完成");
+        // ── 请求批准演示数据 ──
+        approvalRequestRepository.save(ApprovalRequest.builder()
+                .approvalType(ApprovalType.TIME_EXTENSION)
+                .description("今天作业比较多，需要多用30分钟完成在线练习")
+                .extraMinutes(30)
+                .status(ApprovalStatus.PENDING)
+                .requester(child12_15)
+                .build());
+
+        approvalRequestRepository.save(ApprovalRequest.builder()
+                .approvalType(ApprovalType.UNBLOCK)
+                .description("需要查资料，暂时访问百度文库")
+                .targetName("百度文库")
+                .status(ApprovalStatus.PENDING)
+                .requester(child12_15)
+                .build());
+
+        approvalRequestRepository.save(ApprovalRequest.builder()
+                .approvalType(ApprovalType.TIME_EXTENSION)
+                .description("周末想多玩1小时")
+                .extraMinutes(60)
+                .status(ApprovalStatus.PENDING)
+                .requester(child15_18)
+                .build());
+
+        log.info("演示数据初始化完成：{} 个用户(含 {} 个年龄段被保护对象)", 5, 4);
+    }
+
+    private User createChildUser(String username, String ageGroup) {
+        User child = User.builder()
+                .username(username)
+                .password(passwordEncoder.encode("123456"))
+                .phone("1380013800" + (username.length() % 10))
+                .userType(User.UserType.PROTECTED)
+                .ageGroup(ageGroup)
+                .build();
+        return userRepository.save(child);
     }
 }
