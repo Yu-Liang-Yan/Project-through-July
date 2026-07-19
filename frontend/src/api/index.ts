@@ -1,4 +1,4 @@
-import type { Device, TimeSettings, BlockItem, UsageRecord, ApprovalRequest } from '@/types'
+import type { Device, TimeSettings, BlockItem, UsageRecord, ApprovalRequest, GuardianBinding, Alert, ContentFilterRule, BiometricRecord } from '@/types'
 
 const BASE_URL = '/api'
 
@@ -121,6 +121,79 @@ export const api = {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ reason: reason || '已拒绝' })
+      }).then(r => r.json())
+    }
+  },
+  bindings: {
+    bind: (guardianId: number, protectedUserId: number): Promise<ApiResponse<GuardianBinding>> => {
+      return fetch(`${BASE_URL}/bindings?guardianId=${guardianId}&protectedUserId=${protectedUserId}`, {
+        method: 'POST',
+        headers: authHeaders()
+      }).then(r => r.json())
+    },
+    unbind: (id: number): Promise<ApiResponse<void>> => {
+      return fetch(`${BASE_URL}/bindings/${id}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
+    },
+    listProtectedUsers: (guardianId: number): Promise<ApiResponse<GuardianBinding[]>> => {
+      return fetch(`${BASE_URL}/bindings/protected-users?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    listGuardians: (protectedUserId: number): Promise<ApiResponse<GuardianBinding[]>> => {
+      return fetch(`${BASE_URL}/bindings/guardians?protectedUserId=${protectedUserId}`, { headers: authHeaders() }).then(r => r.json())
+    }
+  },
+  alerts: {
+    listForGuardian: (guardianId: number): Promise<ApiResponse<Alert[]>> => {
+      return fetch(`${BASE_URL}/alerts/guardian?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    listForProtectedUser: (protectedUserId: number): Promise<ApiResponse<Alert[]>> => {
+      return fetch(`${BASE_URL}/alerts/protected-user?protectedUserId=${protectedUserId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    markRead: (id: number): Promise<ApiResponse<Alert>> => {
+      return fetch(`${BASE_URL}/alerts/${id}/read`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
+    },
+    resolve: (id: number): Promise<ApiResponse<Alert>> => {
+      return fetch(`${BASE_URL}/alerts/${id}/resolve`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
+    },
+    unreadCount: (guardianId: number): Promise<ApiResponse<number>> => {
+      return fetch(`${BASE_URL}/alerts/count?guardianId=${guardianId}`, { headers: authHeaders() }).then(r => r.json())
+    }
+  },
+  filters: {
+    add: (userId: number, category: string, pattern: string, action: string, priority?: number): Promise<ApiResponse<ContentFilterRule>> => {
+      return fetch(`${BASE_URL}/filters`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId: String(userId), category, pattern, action, priority: String(priority || 1) })
+      }).then(r => r.json())
+    },
+    list: (userId: number, category?: string): Promise<ApiResponse<ContentFilterRule[]>> => {
+      let url = `${BASE_URL}/filters?userId=${userId}`;
+      if (category) url += `&category=${category}`;
+      return fetch(url, { headers: authHeaders() }).then(r => r.json())
+    },
+    remove: (id: number): Promise<ApiResponse<void>> => {
+      return fetch(`${BASE_URL}/filters/${id}`, { method: 'DELETE', headers: authHeaders() }).then(r => r.json())
+    }
+  },
+  biometrics: {
+    register: (userId: number, type: string, confidenceThreshold?: number): Promise<ApiResponse<BiometricRecord>> => {
+      return fetch(`${BASE_URL}/biometrics`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId, type, confidenceThreshold: confidenceThreshold || 0.85 })
+      }).then(r => r.json())
+    },
+    list: (userId: number): Promise<ApiResponse<BiometricRecord[]>> => {
+      return fetch(`${BASE_URL}/biometrics?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    setStatus: (id: number, active: boolean): Promise<ApiResponse<BiometricRecord>> => {
+      return fetch(`${BASE_URL}/biometrics/${id}/status?active=${active}`, { method: 'PUT', headers: authHeaders() }).then(r => r.json())
+    },
+    verify: (userId: number, type: string): Promise<ApiResponse<boolean>> => {
+      return fetch(`${BASE_URL}/biometrics/verify`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ userId: String(userId), type })
       }).then(r => r.json())
     }
   }

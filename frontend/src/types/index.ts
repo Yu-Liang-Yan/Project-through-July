@@ -70,3 +70,50 @@ export interface ApprovalRequest {
   createdAt: string
   reviewedAt?: string
 }
+
+// Phase 2 types
+export interface GuardianBinding {
+  id: number
+  guardianId: number
+  guardianName: string
+  protectedUserId: number
+  protectedUserName: string
+  protectedAgeGroup: string
+  status: string
+  createdAt: string
+}
+
+export interface Alert {
+  id: number
+  protectedUserId: number
+  protectedUserName: string
+  guardianId?: number
+  type: string
+  severity: string
+  title: string
+  message: string
+  status: 'NEW' | 'READ' | 'RESOLVED'
+  createdAt: string
+  resolvedAt?: string
+}
+
+export interface ContentFilterRule {
+  id: number
+  userId: number
+  category: 'KEYWORD' | 'WEBSITE' | 'DOMAIN' | 'APP'
+  pattern: string
+  action: 'BLOCK' | 'WARN' | 'LOG'
+  priority: number
+  enabled: boolean
+  createdAt: string
+}
+
+export interface BiometricRecord {
+  id: number
+  userId: number
+  type: 'FACE' | 'FINGERPRINT' | 'VOICEPRINT' | 'KEYSTROKE'
+  confidenceThreshold: number
+  status: string
+  registeredAt: string
+  lastVerifiedAt?: string
+}

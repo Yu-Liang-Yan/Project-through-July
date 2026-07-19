@@ -7,6 +7,9 @@ import BlockList from '@/views/BlockList.vue'
 import Statistics from '@/views/Statistics.vue'
 import Settings from '@/views/Settings.vue'
 import Approvals from '@/views/Approvals.vue'
+import Alerts from '@/views/Alerts.vue'
+import Relationships from '@/views/Relationships.vue'
+import ContentFilters from '@/views/ContentFilters.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -54,6 +57,24 @@ const routes: RouteRecordRaw[] = [
     path: '/approvals',
     name: 'Approvals',
     component: Approvals,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/relationships',
+    name: 'Relationships',
+    component: Relationships,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/alerts',
+    name: 'Alerts',
+    component: Alerts,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/content-filters',
+    name: 'ContentFilters',
+    component: ContentFilters,
     meta: { requiresAuth: true }
   }
 ]

@@ -23,6 +23,10 @@ public class DataInitializer implements CommandLineRunner {
     private final BlockItemRepository blockItemRepository;
     private final UsageRecordRepository usageRecordRepository;
     private final ApprovalRequestRepository approvalRequestRepository;
+    private final GuardianBindingRepository guardianBindingRepository;
+    private final AlertRepository alertRepository;
+    private final ContentFilterRuleRepository contentFilterRuleRepository;
+    private final BiometricRecordRepository biometricRecordRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -124,6 +128,53 @@ public class DataInitializer implements CommandLineRunner {
                 .status(ApprovalStatus.PENDING)
                 .requester(child15_18)
                 .build());
+
+        // ── Phase2: 监护人-被保护人绑定关系 ──
+        guardianBindingRepository.save(GuardianBinding.builder()
+                .guardian(guardian).protectedUser(child6_12)
+                .status(GuardianBinding.BindingStatus.ACTIVE).createdAt(now).build());
+        guardianBindingRepository.save(GuardianBinding.builder()
+                .guardian(guardian).protectedUser(child12_15)
+                .status(GuardianBinding.BindingStatus.ACTIVE).createdAt(now).build());
+        guardianBindingRepository.save(GuardianBinding.builder()
+                .guardian(guardian).protectedUser(child15_18)
+                .status(GuardianBinding.BindingStatus.ACTIVE).createdAt(now).build());
+
+        // ── Phase2: 告警示例 ──
+        alertRepository.save(Alert.builder()
+                .protectedUser(child12_15).guardian(guardian)
+                .type(Alert.AlertType.BLOCKED_CONTENT).severity(Alert.AlertSeverity.HIGH)
+                .title("尝试访问禁止网站").message("被保护用户尝试访问禁止网站：抖音")
+                .status(Alert.AlertStatus.NEW).createdAt(now.minusMinutes(10)).build());
+        alertRepository.save(Alert.builder()
+                .protectedUser(child6_12).guardian(guardian)
+                .type(Alert.AlertType.TIME_EXCEEDED).severity(Alert.AlertSeverity.MEDIUM)
+                .title("使用时间即将超标").message("被保护用户今日累计使用时长即将达到限额")
+                .status(Alert.AlertStatus.NEW).createdAt(now.minusHours(1)).build());
+
+        // ── Phase2: 内容过滤规则 ──
+        contentFilterRuleRepository.save(ContentFilterRule.builder()
+                .user(guardian).category(ContentFilterRule.FilterCategory.KEYWORD)
+                .pattern("赌博").action(ContentFilterRule.FilterAction.BLOCK)
+                .priority(1).enabled(true).createdAt(now).build());
+        contentFilterRuleRepository.save(ContentFilterRule.builder()
+                .user(guardian).category(ContentFilterRule.FilterCategory.KEYWORD)
+                .pattern("色情").action(ContentFilterRule.FilterAction.BLOCK)
+                .priority(1).enabled(true).createdAt(now).build());
+        contentFilterRuleRepository.save(ContentFilterRule.builder()
+                .user(guardian).category(ContentFilterRule.FilterCategory.WEBSITE)
+                .pattern("tiktok.com").action(ContentFilterRule.FilterAction.BLOCK)
+                .priority(2).enabled(true).createdAt(now).build());
+
+        // ── Phase2: 生物特征注册 ──
+        biometricRecordRepository.save(BiometricRecord.builder()
+                .user(guardian).type(BiometricRecord.BiometricType.FACE)
+                .dataHash("face_hash_guardian").confidenceThreshold(0.9)
+                .status(BiometricRecord.BiometricStatus.ACTIVE).registeredAt(now).build());
+        biometricRecordRepository.save(BiometricRecord.builder()
+                .user(guardian).type(BiometricRecord.BiometricType.FINGERPRINT)
+                .dataHash("fp_hash_guardian").confidenceThreshold(0.85)
+                .status(BiometricRecord.BiometricStatus.ACTIVE).registeredAt(now).build());
 
         log.info("演示数据初始化完成：{} 个用户(含 {} 个年龄段被保护对象)", 5, 4);
     }

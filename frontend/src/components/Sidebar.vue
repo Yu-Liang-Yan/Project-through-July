@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
-import { Shield, Home, Laptop, Clock, Ban, BarChart3, Settings, LogOut, UserCircle, CheckCircle } from '@lucide/vue'
+import { Shield, Home, Laptop, Clock, Ban, BarChart3, Settings, LogOut, UserCircle, CheckCircle, Bell, Users, Filter } from '@lucide/vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -16,7 +16,10 @@ const navItems = [
   { path: '/block-list', label: '禁止列表', icon: Ban },
   { path: '/statistics', label: '使用统计', icon: BarChart3 },
   { path: '/settings', label: '设置', icon: Settings },
-  { path: '/approvals', label: '请求审批', icon: CheckCircle }
+  { path: '/approvals', label: '请求审批', icon: CheckCircle },
+  { path: '/alerts', label: '告警通知', icon: Bell },
+  { path: '/relationships', label: '关系管理', icon: Users },
+  { path: '/content-filters', label: '内容过滤', icon: Filter }
 ]
 
 const currentPath = computed(() => route.path)
