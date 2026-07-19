@@ -11,6 +11,7 @@ import com.guardianbaby.entity.User.UserType;
 import com.guardianbaby.repository.ApprovalRequestRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.ApprovalRequestService;
+import com.guardianbaby.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
 
     private final ApprovalRequestRepository approvalRequestRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -111,6 +113,8 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
         ar.setResponseMessage(reason);
         ar.setReviewedAt(LocalDateTime.now());
         approvalRequestRepository.save(ar);
+
+        auditLogService.log(reviewerId, "REJECT", "拒绝请求 #" + requestId + ": " + reason, "127.0.0.1");
 
         return ApprovalRequestResponse.fromEntity(ar);
     }

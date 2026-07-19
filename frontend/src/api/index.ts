@@ -1,4 +1,4 @@
-import type { Device, TimeSettings, BlockItem, UsageRecord, ApprovalRequest, GuardianBinding, Alert, ContentFilterRule, BiometricRecord } from '@/types'
+import type { Device, TimeSettings, BlockItem, UsageRecord, ApprovalRequest, GuardianBinding, Alert, ContentFilterRule, BiometricRecord, AuditLogEntry } from '@/types'
 
 const BASE_URL = '/api'
 
@@ -195,6 +195,14 @@ export const api = {
         headers: authHeaders(),
         body: JSON.stringify({ userId: String(userId), type })
       }).then(r => r.json())
+    }
+  },
+  auditLogs: {
+    listByUser: (userId: number): Promise<ApiResponse<AuditLogEntry[]>> => {
+      return fetch(`${BASE_URL}/audit-logs/user?userId=${userId}`, { headers: authHeaders() }).then(r => r.json())
+    },
+    listAll: (): Promise<ApiResponse<AuditLogEntry[]>> => {
+      return fetch(`${BASE_URL}/audit-logs`, { headers: authHeaders() }).then(r => r.json())
     }
   }
 }

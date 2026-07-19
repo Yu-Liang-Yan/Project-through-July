@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { api } from '@/api'
@@ -15,8 +15,9 @@ const guardians = ref<GuardianBinding[]>([])
 const showBindModal = ref(false)
 const bindUserId = ref('')
 const loading = ref(false)
+const dataLoading = ref(true)
 
-const isGuardian = userStore.currentUser?.userType === 'guardian'
+const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
 
 const toast = (msg: string, type: string) => {
   ;(window as any).showToast?.(msg, type)
@@ -33,6 +34,8 @@ const loadData = async () => {
     if (gu.success && gu.data) guardians.value = gu.data
   } catch (e) {
     console.error(e)
+  } finally {
+    dataLoading.value = false
   }
 }
 
@@ -88,6 +91,12 @@ onMounted(async () => {
       <Header title="关系管理" subtitle="管理监护人与被保护对象之间的绑定关系" />
 
       <div class="p-6 space-y-6">
+        <div v-if="dataLoading" class="text-center py-16 text-gray-500">
+          <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+          <p>加载关系数据...</p>
+        </div>
+
+        <template v-else>
         <!-- 我被保护的用户（监护人视角） -->
         <div v-if="isGuardian" class="bg-white rounded-xl shadow-sm p-6">
           <div class="flex items-center justify-between mb-4">
@@ -155,6 +164,7 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+        </template>
       </div>
 
       <!-- 绑定模态框 -->

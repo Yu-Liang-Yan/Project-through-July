@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { api } from '@/api'
 import type { Alert } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
-import { Bell, AlertTriangle, Clock, Shield, CheckCircle, Eye } from '@lucide/vue'
+import { Bell, AlertTriangle, Clock, Shield, CheckCircle, Eye, Activity } from '@lucide/vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const alerts = ref<Alert[]>([])
 const unreadCount = ref(0)
+const loading = ref(true)
 
-const isGuardian = userStore.currentUser?.userType === 'guardian'
+const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
 
 const toast = (msg: string, type: string) => {
   ;(window as any).showToast?.(msg, type)
@@ -52,7 +53,7 @@ const typeLabel = (type: string) => {
 const loadData = async () => {
   const uid = userStore.currentUser?.id ?? 1
   try {
-    if (isGuardian) {
+    if (isGuardian.value) {
       const [res, countRes] = await Promise.all([
         api.alerts.listForGuardian(uid),
         api.alerts.unreadCount(uid)
@@ -65,6 +66,8 @@ const loadData = async () => {
     }
   } catch (e) {
     console.error(e)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -104,7 +107,12 @@ onMounted(async () => {
       <Header title="告警通知" :subtitle="isGuardian ? `共 ${unreadCount} 条未读告警` : '系统通知记录'" />
 
       <div class="p-6">
-        <div v-if="alerts.length === 0" class="text-center py-16 text-gray-500">
+        <div v-if="loading" class="text-center py-16 text-gray-500">
+          <Activity class="w-12 h-12 mx-auto mb-4 animate-spin text-primary-500" />
+          <p>加载告警数据...</p>
+        </div>
+
+        <div v-else-if="alerts.length === 0" class="text-center py-16 text-gray-500">
           <Bell class="w-16 h-16 mx-auto mb-4 text-gray-300" />
           <p class="text-lg">暂无告警通知</p>
         </div>

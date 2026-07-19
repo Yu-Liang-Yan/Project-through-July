@@ -14,4 +14,6 @@ public interface GuardianBindingRepository extends JpaRepository<GuardianBinding
     Optional<GuardianBinding> findByGuardianIdAndProtectedUserId(Long guardianId, Long protectedUserId);
 
     long countByGuardianIdAndStatus(Long guardianId, GuardianBinding.BindingStatus status);
+
+    long countByGuardianId(Long guardianId);
 }

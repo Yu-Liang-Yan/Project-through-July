@@ -55,6 +55,28 @@ export interface DashboardStats {
   weekUsage: number
   deviceCount: number
   alertCount: number
+  bindingCount: number
+  onlineDeviceCount: number
+  recentAlerts: AlertSummary[]
+}
+
+export interface AlertSummary {
+  id: number
+  title: string
+  severity: string
+  type: string
+  protectedUserName: string
+  createdAt: string
+}
+
+export interface AuditLogEntry {
+  id: number
+  userId: number
+  username: string
+  action: string
+  detail: string
+  ip: string
+  createdAt: string
 }
 
 export interface ApprovalRequest {

@@ -8,6 +8,7 @@ import com.guardianbaby.dto.RegisterRequest;
 import com.guardianbaby.dto.UserResponse;
 import com.guardianbaby.entity.User;
 import com.guardianbaby.repository.UserRepository;
+import com.guardianbaby.service.AuditLogService;
 import com.guardianbaby.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +22,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final AuditLogService auditLogService;
 
     @Override
     public LoginResponse login(LoginRequest request) {
@@ -32,6 +34,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
+
+        auditLogService.log(user.getId(), "LOGIN", "用户登录系统", request.getUsername());
 
         return LoginResponse.builder()
                 .id(user.getId())

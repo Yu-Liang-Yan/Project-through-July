@@ -10,6 +10,8 @@ import Approvals from '@/views/Approvals.vue'
 import Alerts from '@/views/Alerts.vue'
 import Relationships from '@/views/Relationships.vue'
 import ContentFilters from '@/views/ContentFilters.vue'
+import AuditLogs from '@/views/AuditLogs.vue'
+import UserManagement from '@/views/UserManagement.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -75,6 +77,18 @@ const routes: RouteRecordRaw[] = [
     path: '/content-filters',
     name: 'ContentFilters',
     component: ContentFilters,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/audit-logs',
+    name: 'AuditLogs',
+    component: AuditLogs,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user-management',
+    name: 'UserManagement',
+    component: UserManagement,
     meta: { requiresAuth: true }
   }
 ]
