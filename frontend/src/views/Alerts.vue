@@ -7,6 +7,7 @@ import type { Alert } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Bell, AlertTriangle, Clock, Shield, CheckCircle, Eye, Activity } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,9 +17,7 @@ const loading = ref(true)
 
 const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
 
 const typeIcon = (type: string) => {
   const map: Record<string, any> = {

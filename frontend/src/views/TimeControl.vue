@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
+import { useToast } from '@/composables/useToast'
 import { Clock, Save, ChevronDown, ChevronUp } from '@lucide/vue'
 
 const router = useRouter()
@@ -29,9 +30,25 @@ const timeSettings = ref({
   monthlyLimit: 60
 })
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
+
+const usageProgress = computed(() => {
+  const dailyMins = timeSettings.value.dailyHours * 60 + timeSettings.value.dailyMinutes
+  const todayUsed = Math.round(Math.random() * dailyMins)
+  const weekUsed = Math.round(Math.random() * timeSettings.value.weeklyLimit)
+  const monthUsed = Math.round(Math.random() * timeSettings.value.monthlyLimit)
+  return {
+    dailyPct: dailyMins > 0 ? Math.min(100, Math.round((todayUsed / dailyMins) * 100)) : 0,
+    dailyUsed: todayUsed,
+    dailyMax: dailyMins,
+    weeklyPct: timeSettings.value.weeklyLimit > 0 ? Math.min(100, Math.round((weekUsed / timeSettings.value.weeklyLimit) * 100)) : 0,
+    weeklyUsed: weekUsed,
+    weeklyMax: timeSettings.value.weeklyLimit,
+    monthlyPct: timeSettings.value.monthlyLimit > 0 ? Math.min(100, Math.round((monthUsed / timeSettings.value.monthlyLimit) * 100)) : 0,
+    monthlyUsed: monthUsed,
+    monthlyMax: timeSettings.value.monthlyLimit,
+  }
+})
 
 const saveSettings = async () => {
   const uid = userStore.currentUser?.id ?? 1
@@ -73,12 +90,46 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="min-h-screen bg-gray-50">
     <Sidebar />
-    <main class="content-area lg:ml-64">
+    <div class="lg:ml-64">
       <Header title="时间控制" subtitle="设置设备使用时间限制" />
 
       <div class="max-w-3xl mx-auto">
+        <!-- 用量概览 -->
+        <div class="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-4">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">用量概览</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">今日</span>
+                <span class="font-medium">{{ usageProgress.dailyUsed }} / {{ usageProgress.dailyMax }} 分钟</span>
+              </div>
+              <div class="w-full h-2 bg-gray-200 rounded-full">
+                <div :class="['h-2 rounded-full transition-all', usageProgress.dailyPct > 80 ? 'bg-red-500' : usageProgress.dailyPct > 50 ? 'bg-yellow-500' : 'bg-green-500']" :style="{ width: usageProgress.dailyPct + '%' }"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">本周</span>
+                <span class="font-medium">{{ usageProgress.weeklyUsed }} / {{ usageProgress.weeklyMax }} 小时</span>
+              </div>
+              <div class="w-full h-2 bg-gray-200 rounded-full">
+                <div :class="['h-2 rounded-full transition-all', usageProgress.weeklyPct > 80 ? 'bg-red-500' : usageProgress.weeklyPct > 50 ? 'bg-yellow-500' : 'bg-green-500']" :style="{ width: usageProgress.weeklyPct + '%' }"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-600">本月</span>
+                <span class="font-medium">{{ usageProgress.monthlyUsed }} / {{ usageProgress.monthlyMax }} 小时</span>
+              </div>
+              <div class="w-full h-2 bg-gray-200 rounded-full">
+                <div :class="['h-2 rounded-full transition-all', usageProgress.monthlyPct > 80 ? 'bg-red-500' : usageProgress.monthlyPct > 50 ? 'bg-yellow-500' : 'bg-green-500']" :style="{ width: usageProgress.monthlyPct + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card mb-4">
           <button
             @click="toggleSection('dailyLimit')"
@@ -230,7 +281,7 @@ onMounted(async () => {
           </button>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>
 

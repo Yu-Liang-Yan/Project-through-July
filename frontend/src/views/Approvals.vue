@@ -7,6 +7,7 @@ import type { ApprovalRequest } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { CheckCircle, XCircle, Plus, Clock, Ban, FileText } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -40,9 +41,7 @@ const statusClasses: Record<string, string> = {
   REJECTED: 'bg-red-100 text-red-800'
 }
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
 
 const loadData = async () => {
   loading.value = true

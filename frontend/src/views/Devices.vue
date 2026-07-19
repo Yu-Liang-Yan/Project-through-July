@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useDevicesStore } from '@/stores/devices'
@@ -7,6 +7,7 @@ import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -14,6 +15,7 @@ const devicesStore = useDevicesStore()
 
 const isScanning = ref(false)
 const showAddModal = ref(false)
+const searchQuery = ref('')
 const newDevice = ref({
   name: '',
   type: 'phone' as 'phone' | 'tablet' | 'computer' | 'watch' | 'reader'
@@ -37,9 +39,15 @@ const getDeviceLabel = (type: string) => {
   return device ? device.label : type
 }
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
+
+const filteredDevices = computed(() => {
+  const q = searchQuery.value.toLowerCase().trim()
+  if (!q) return devicesStore.devices
+  return devicesStore.devices.filter(d =>
+    d.name.toLowerCase().includes(q) || getDeviceLabel(d.type).includes(q)
+  )
+})
 
 const loadDevices = async () => {
   const uid = userStore.currentUser?.id ?? 1
@@ -110,15 +118,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="min-h-screen bg-gray-50">
     <Sidebar />
-    <main class="content-area lg:ml-64">
+    <div class="lg:ml-64">
       <Header title="设备管理" subtitle="管理所有受控设备" />
 
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div class="relative">
           <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
+            v-model="searchQuery"
             type="text"
             placeholder="搜索设备..."
             class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none w-full sm:w-64"
@@ -144,9 +153,9 @@ onMounted(async () => {
       </div>
 
       <div class="card">
-        <div v-if="devicesStore.devices.length === 0" class="text-center py-12">
+        <div v-if="filteredDevices.length === 0" class="text-center py-12">
           <Laptop class="w-16 h-16 mx-auto text-gray-300 mb-4" />
-          <p class="text-gray-500">暂无设备，请扫描或添加设备</p>
+          <p class="text-gray-500">{{ searchQuery ? '无匹配设备' : '暂无设备，请扫描或添加设备' }}</p>
         </div>
 
         <div v-else class="overflow-x-auto">
@@ -162,7 +171,7 @@ onMounted(async () => {
             </thead>
             <tbody>
               <tr
-                v-for="device in devicesStore.devices"
+                v-for="device in filteredDevices"
                 :key="device.id"
                 class="border-b border-gray-100 hover:bg-gray-50 transition-colors"
               >
@@ -255,6 +264,6 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-    </main>
+    </div>
   </div>
 </template>

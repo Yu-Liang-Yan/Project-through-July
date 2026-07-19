@@ -7,6 +7,7 @@ import type { GuardianBinding } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Users, Plus, Trash2, UserCircle, Shield } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -19,9 +20,7 @@ const dataLoading = ref(true)
 
 const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
 
 const loadData = async () => {
   const uid = userStore.currentUser?.id ?? 1

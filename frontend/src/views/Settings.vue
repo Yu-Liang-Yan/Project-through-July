@@ -7,6 +7,7 @@ import type { BiometricRecord } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Camera, Fingerprint, Mic, Keyboard, Shield, Download, Trash2, ToggleLeft, ToggleRight, Key, User, Phone } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -36,9 +37,7 @@ const getBiometricStatus = (type: string) => {
   return biometrics.value.find(b => b.type === type)?.status === 'ACTIVE'
 }
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
 
 const loadBiometrics = async () => {
   const uid = userStore.currentUser?.id ?? 1

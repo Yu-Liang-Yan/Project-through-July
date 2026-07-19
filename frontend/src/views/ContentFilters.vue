@@ -7,6 +7,7 @@ import type { ContentFilterRule } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Filter, Plus, Trash2, AlertTriangle } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -30,9 +31,7 @@ const actions = [
   { value: 'LOG', label: '记录' }
 ]
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
+const { toast } = useToast()
 
 const loadRules = async () => {
   const uid = userStore.currentUser?.id ?? 1

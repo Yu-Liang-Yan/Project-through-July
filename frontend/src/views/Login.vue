@@ -4,9 +4,11 @@ import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { api } from '@/api'
 import { Shield, User, Lock, Phone, Camera, Fingerprint, Mic, Eye, EyeOff } from '@lucide/vue'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { toast } = useToast()
 
 const activeTab = ref<'login' | 'register'>('login')
 const showPassword = ref(false)
@@ -32,10 +34,6 @@ onMounted(() => {
     router.push('/dashboard')
   }
 })
-
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-}
 
 const handleLogin = async () => {
   if (!loginForm.value.username || !loginForm.value.password) {

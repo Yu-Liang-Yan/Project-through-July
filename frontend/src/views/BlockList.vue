@@ -5,6 +5,7 @@ import { api } from '@/api';
 import type { BlockItem } from '@/types';
 import Sidebar from '@/components/Sidebar.vue';
 import Header from '@/components/Header.vue';
+import { useToast } from '@/composables/useToast'
 import { Plus, Trash2, Globe, Gamepad2, Smartphone } from '@lucide/vue';
 
 const router = useRouter();
@@ -23,9 +24,7 @@ const tabs = [
 
 const currentList = computed(() => blockData.value[activeTab.value] || []);
 
-const toast = (msg: string, type: string) => {
-  ;(window as any).showToast?.(msg, type)
-};
+const { toast } = useToast()
 
 const loadBlockList = async (type: string) => {
   const uid = userStore.currentUser?.id ?? 1;
@@ -82,9 +81,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page-container">
+  <div class="min-h-screen bg-gray-50">
     <Sidebar />
-    <main class="content-area lg:ml-64">
+    <div class="lg:ml-64">
       <Header title="禁止列表" subtitle="管理禁止访问的网站、游戏和应用" />
 
       <div class="flex border-b border-gray-200 mb-6">
