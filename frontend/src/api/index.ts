@@ -237,6 +237,12 @@ export const api = {
 
     remove: (id: number) =>
       request<void>(`${BASE_URL}/filters/${id}`, { method: 'DELETE', headers: authHeaders() }),
+
+    evaluate: (userId: number, content: string) =>
+      request<{ action: string; matchedRule: string; matchedCategory: string; blocked: boolean }>(
+        `${BASE_URL}/filters/evaluate`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId, content }) }
+      ),
   },
 
   // ======================== biometrics ========================

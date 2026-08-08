@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw, Lock, Unlock } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import { useWebSocket } from '@/composables/useWebSocket'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -59,6 +60,7 @@ const canToggleLock = (s: string) => s === 'online' || s === 'LOCKED'
 const isLocked = (s: string) => s === 'LOCKED'
 
 const { toast } = useToast()
+const { onMessage } = useWebSocket()
 
 const filteredDevices = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
@@ -157,6 +159,11 @@ onMounted(async () => {
   }
   devicesStore.loadFromStorage()
   await loadDevices()
+
+  // WS auto-refresh
+  onMessage((type) => {
+    if (type === 'DEVICE_STATUS') loadDevices()
+  })
 })
 </script>
 

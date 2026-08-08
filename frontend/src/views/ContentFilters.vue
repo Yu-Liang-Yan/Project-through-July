@@ -6,7 +6,7 @@ import { api } from '@/api'
 import type { ContentFilterRule } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
-import { Filter, Plus, Trash2, AlertTriangle, Activity } from '@lucide/vue'
+import { Filter, Plus, Trash2, AlertTriangle, Activity, Search, ShieldAlert } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -17,6 +17,11 @@ const activeCategory = ref('ALL')
 const newPattern = ref('')
 const newAction = ref('BLOCK')
 const newCategory = ref('KEYWORD')
+
+// Evaluate test
+const testContent = ref('')
+const testResult = ref<{ action: string; matchedRule: string; matchedCategory: string; blocked: boolean } | null>(null)
+const testing = ref(false)
 
 const categories = [
   { value: 'ALL', label: '全部' },
@@ -76,6 +81,24 @@ const removeRule = async (id: number) => {
   }
 }
 
+const runEvaluate = async () => {
+  if (!testContent.value.trim()) {
+    toast('请输入要测试的内容', 'warning')
+    return
+  }
+  testing.value = true
+  testResult.value = null
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.filters.evaluate(uid, testContent.value.trim())
+    if (res.success && res.data) testResult.value = res.data
+  } catch (e) {
+    toast('检测失败', 'error')
+  } finally {
+    testing.value = false
+  }
+}
+
 onMounted(async () => {
   userStore.loadFromStorage()
   if (!userStore.isLoggedIn) {
@@ -126,6 +149,44 @@ onMounted(async () => {
               </select>
               <button @click="addRule" class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">添加</button>
             </div>
+          </div>
+        </div>
+
+        <!-- 内容检测工具 -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+          <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <Search class="w-5 h-5 text-primary-600" />
+            内容检测工具
+          </h3>
+          <p class="text-sm text-gray-500 mb-3">输入网址、关键词或应用名，测试是否会被过滤规则拦截</p>
+          <div class="flex gap-3">
+            <input
+              v-model="testContent"
+              type="text"
+              placeholder="输入内容（如: tiktok.com、抖音、王者荣耀）"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-primary-500"
+              @keyup.enter="runEvaluate"
+            />
+            <button @click="runEvaluate" :disabled="testing"
+              class="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50">
+              {{ testing ? '检测中...' : '检测' }}
+            </button>
+          </div>
+          <div v-if="testResult" :class="[
+            'mt-4 p-4 rounded-lg border',
+            testResult.blocked ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'
+          ]">
+            <div class="flex items-center gap-2 mb-1">
+              <ShieldAlert v-if="testResult.blocked" class="w-5 h-5 text-red-600" />
+              <span :class="testResult.blocked ? 'text-red-700 font-semibold' : 'text-green-700 font-semibold'">
+                {{ testResult.blocked ? '已拦截' : '允许通过' }}
+              </span>
+              <span class="text-sm text-gray-500">— {{ testResult.action === 'BLOCK' ? '拦截' : testResult.action === 'WARN' ? '警告' : testResult.action === 'LOG' ? '仅记录' : '通过' }}</span>
+            </div>
+            <p v-if="testResult.matchedRule" class="text-sm text-gray-600">
+              匹配规则: <code class="bg-gray-100 px-1 rounded">{{ testResult.matchedRule }}</code>
+              <span class="text-gray-400 ml-2">({{ testResult.matchedCategory }})</span>
+            </p>
           </div>
         </div>
 

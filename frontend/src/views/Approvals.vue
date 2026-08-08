@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { CheckCircle, XCircle, Plus, Clock, Ban, FileText } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import { useWebSocket } from '@/composables/useWebSocket'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -43,6 +44,7 @@ const statusClasses: Record<string, string> = {
 }
 
 const { toast } = useToast()
+const { onMessage } = useWebSocket()
 
 const loadData = async () => {
   loading.value = true
@@ -117,6 +119,12 @@ onMounted(async () => {
     return
   }
   await loadData()
+
+  // WS auto-refresh
+  onMessage((type, _payload) => {
+    if (type === 'APPROVAL_NEW' && isGuardian.value) loadData()
+    if (type === 'APPROVAL_RESULT' && !isGuardian.value) loadData()
+  })
 })
 </script>
 

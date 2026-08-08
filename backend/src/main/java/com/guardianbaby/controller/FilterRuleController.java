@@ -1,6 +1,7 @@
 package com.guardianbaby.controller;
 
 import com.guardianbaby.dto.*;
+import com.guardianbaby.service.ContentEvaluationService;
 import com.guardianbaby.service.FilterRuleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.Map;
 public class FilterRuleController {
 
     private final FilterRuleService filterRuleService;
+    private final ContentEvaluationService evaluationService;
 
     @PostMapping
     public ApiResponse<FilterRuleResponse> add(@RequestBody Map<String, String> body) {
@@ -33,6 +35,26 @@ public class FilterRuleController {
             return ApiResponse.ok(filterRuleService.listByUserAndCategory(userId, category));
         }
         return ApiResponse.ok(filterRuleService.listByUser(userId));
+    }
+
+    @PostMapping("/evaluate")
+    public ApiResponse<Map<String, Object>> evaluate(@RequestBody Map<String, Object> body) {
+        Long userId = body.get("userId") instanceof Number
+                ? ((Number) body.get("userId")).longValue() : null;
+        String content = (String) body.get("content");
+
+        if (userId == null || content == null) {
+            return ApiResponse.fail("请提供 userId 和 content");
+        }
+
+        var result = evaluationService.evaluate(userId, content);
+
+        return ApiResponse.ok("评估完成", Map.of(
+            "action", result.action(),
+            "matchedRule", result.matchedRule() != null ? result.matchedRule() : "",
+            "matchedCategory", result.matchedCategory() != null ? result.matchedCategory() : "",
+            "blocked", result.blocked()
+        ));
     }
 
     @DeleteMapping("/{id}")

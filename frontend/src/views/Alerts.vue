@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
 import { Bell, AlertTriangle, Clock, Shield, CheckCircle, Eye, Activity } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import { useWebSocket } from '@/composables/useWebSocket'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -18,6 +19,7 @@ const loading = ref(true)
 const isGuardian = computed(() => userStore.currentUser?.userType === 'guardian')
 
 const { toast } = useToast()
+const { onMessage } = useWebSocket()
 
 const typeIcon = (type: string) => {
   const map: Record<string, any> = {
@@ -96,6 +98,11 @@ onMounted(async () => {
     return
   }
   await loadData()
+
+  // WS auto-refresh
+  onMessage((type) => {
+    if (type === 'ALERT') loadData()
+  })
 })
 </script>
 
