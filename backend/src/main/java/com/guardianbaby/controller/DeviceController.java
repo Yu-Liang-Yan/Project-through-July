@@ -3,6 +3,7 @@ package com.guardianbaby.controller;
 import com.guardianbaby.dto.ApiResponse;
 import com.guardianbaby.dto.DeviceResponse;
 import com.guardianbaby.service.DeviceService;
+import com.guardianbaby.service.impl.DiscoveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,11 +16,18 @@ import java.util.Map;
 public class DeviceController {
 
     private final DeviceService deviceService;
+    private final DiscoveryService discoveryService;
 
     // 临时：从请求参数获取 userId，第二轮改 JWT 后从 token 中提取
     @GetMapping
     public ApiResponse<List<DeviceResponse>> list(@RequestParam Long userId) {
         return ApiResponse.ok(deviceService.listDevices(userId));
+    }
+
+    @PostMapping("/discover")
+    public ApiResponse<List<Map<String, Object>>> discover() {
+        List<Map<String, Object>> devices = discoveryService.discover();
+        return ApiResponse.ok("发现 " + devices.size() + " 个设备", devices);
     }
 
     @PostMapping

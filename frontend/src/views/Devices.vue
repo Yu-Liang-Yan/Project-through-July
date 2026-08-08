@@ -84,16 +84,26 @@ const loadDevices = async () => {
 
 const scanDevices = async () => {
   isScanning.value = true
-  toast('正在扫描设备...', 'info')
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  const mockDevices = [
-    { id: Date.now() + 1, name: '小明的手机', type: 'phone' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() },
-    { id: Date.now() + 2, name: '客厅电脑', type: 'computer' as const, status: 'offline' as const, lastActive: new Date(Date.now() - 3600000).toISOString(), registeredAt: new Date().toISOString() },
-    { id: Date.now() + 3, name: '平板设备', type: 'tablet' as const, status: 'online' as const, lastActive: new Date().toISOString(), registeredAt: new Date().toISOString() }
-  ]
-  devicesStore.setDevices(mockDevices)
-  isScanning.value = false
-  toast(`扫描完成，发现 ${mockDevices.length} 个设备`, 'success')
+  toast('正在局域网扫描设备...', 'info')
+  try {
+    const res = await api.devices.discover()
+    if (res.success && res.data && res.data.length > 0) {
+      const uid = userStore.currentUser?.id ?? 1
+      for (const dev of res.data) {
+        try {
+          await api.devices.add(uid, dev.name, dev.type || 'phone')
+        } catch { /* skip duplicates */ }
+      }
+      toast(`发现 ${res.data.length} 个设备`, 'success')
+      await loadDevices()
+    } else {
+      toast('未发现设备（请确保 Agent 在同一局域网运行）', 'warning')
+    }
+  } catch (e) {
+    toast('扫描失败，请检查网络连接', 'error')
+  } finally {
+    isScanning.value = false
+  }
 }
 
 const addDevice = async () => {
@@ -190,7 +200,7 @@ onMounted(async () => {
             class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
           >
             <RefreshCw :class="['w-5 h-5', isScanning ? 'animate-spin' : '']" />
-            {{ isScanning ? '扫描中...' : '扫描设备(演示)' }}
+            {{ isScanning ? '扫描中...' : '扫描设备' }}
           </button>
           <button
             @click="showAddModal = true"

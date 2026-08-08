@@ -105,6 +105,12 @@ export const api = {
         `${BASE_URL}/devices/${id}/unlock?userId=${userId}`,
         { method: 'PUT', headers: authHeaders() }
       ),
+
+    discover: () =>
+      request<{ name: string; type: string; hostname: string; ip: string }[]>(
+        `${BASE_URL}/devices/discover`,
+        { method: 'POST', headers: authHeaders() }
+      ),
   },
 
   // ======================== timeSettings ========================

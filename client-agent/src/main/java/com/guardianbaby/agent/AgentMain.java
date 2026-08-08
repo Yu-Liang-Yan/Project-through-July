@@ -17,6 +17,7 @@ public class AgentMain {
     private final AgentHttpClient http;
     private final AgentWebSocket wsClient;
     private final DataCollector collector;
+    private final DiscoveryResponder discoveryResponder;
     private final ObjectMapper mapper = new ObjectMapper();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
 
@@ -39,6 +40,7 @@ public class AgentMain {
         this.http = new AgentHttpClient(config.serverUrl());
         this.wsClient = new AgentWebSocket();
         this.collector = new DataCollector();
+        this.discoveryResponder = new DiscoveryResponder(config.deviceName(), config.deviceType());
     }
 
     public void start() {
@@ -151,6 +153,7 @@ public class AgentMain {
                     running = true;
                     updateStatus(true);
                     log("WebSocket 已连接");
+                    discoveryResponder.start();
                     startPeriodicTasks();
                     SwingUtilities.invokeLater(() -> {
                         disconnectBtn.setEnabled(true);
@@ -158,6 +161,7 @@ public class AgentMain {
                     });
                 } else if ("__DISCONNECTED__".equals(msg)) {
                     running = false;
+                    discoveryResponder.stop();
                     updateStatus(false);
                     log("WebSocket 已断开");
                     SwingUtilities.invokeLater(() -> {
@@ -173,6 +177,7 @@ public class AgentMain {
     }
 
     private void doDisconnect() {
+        discoveryResponder.stop();
         shutdown();
         SwingUtilities.invokeLater(() -> {
             connectBtn.setEnabled(true);
@@ -266,6 +271,7 @@ public class AgentMain {
 
     private void shutdown() {
         running = false;
+        discoveryResponder.stop();
         scheduler.shutdown();
         wsClient.close();
     }
