@@ -197,28 +197,28 @@ const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
         </div>
 
         <div class="pt-2">
-          <p class="text-sm text-gray-500 mb-3">生物识别登录：</p>
+          <p class="text-sm text-gray-500 mb-3">快速登录（演示）：</p>
           <div class="grid grid-cols-3 gap-3">
             <button
               @click="startBiometric('face')"
-              class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
+              class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
-              <Camera class="w-6 h-6 text-primary-500" />
-              <span class="text-sm text-gray-600">人脸</span>
+              <Camera class="w-5 h-5 text-gray-400" />
+              <span class="text-xs text-gray-400">人脸(演示)</span>
             </button>
             <button
               @click="startBiometric('fingerprint')"
-              class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
+              class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
-              <Fingerprint class="w-6 h-6 text-primary-500" />
-              <span class="text-sm text-gray-600">指纹</span>
+              <Fingerprint class="w-5 h-5 text-gray-400" />
+              <span class="text-xs text-gray-400">指纹(演示)</span>
             </button>
             <button
               @click="startBiometric('voice')"
-              class="flex flex-col items-center gap-2 p-4 border border-gray-200 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
+              class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
-              <Mic class="w-6 h-6 text-primary-500" />
-              <span class="text-sm text-gray-600">声纹</span>
+              <Mic class="w-5 h-5 text-gray-400" />
+              <span class="text-xs text-gray-400">声纹(演示)</span>
             </button>
           </div>
         </div>

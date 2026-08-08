@@ -25,8 +25,8 @@ git clone https://github.com/Yu-Liang-Yan/Project-through-July.git
 
 > 如果已经下载过，想拉取最新代码：
 > ```bash
-> cd Project-through-July
-> git pull origin master
+> cd guardian-baby
+> git pull origin develop
 > ```
 
 ---
@@ -50,7 +50,7 @@ git clone https://github.com/Yu-Liang-Yan/Project-through-July.git
 
 ```bash
 # 进入后端目录
-cd Project-through-July/backend
+cd guardian-baby/backend
 
 # 方式一：使用项目自带的 Maven Wrapper（推荐，无需安装 Maven）
 # Windows PowerShell:
@@ -89,7 +89,7 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/auth/login" -Method POST -Cont
 
 ```bash
 # 新开一个终端，进入前端目录
-cd Project-through-July/frontend
+cd guardian-baby/frontend
 
 # 安装依赖（仅首次需要，约 2-3 分钟）
 npm install
@@ -212,48 +212,61 @@ guardian-baby/
 │           │   ├── Device.java       #    设备（手机/平板/电脑/手表/阅读器）
 │           │   ├── TimeSettings.java #    时间控制设置
 │           │   ├── BlockItem.java    #    禁止列表项
-│           │   └── UsageRecord.java  #    使用记录
+│           │   ├── ContentFilterRule.java # 内容过滤规则
+│           │   ├── UsageRecord.java  #    使用记录
+│           │   ├── ApprovalRequest.java   # 请求审批
+│           │   ├── Alert.java        #    告警通知
+│           │   ├── GuardianBinding.java   # 监护人-被保护人绑定
+│           │   ├── BiometricRecord.java   # 生物特征注册记录
+│           │   └── AuditLog.java     #    操作审计日志
 │           │
 │           ├── dto/                  # ─── 数据传输对象 ───
 │           │   ├── ApiResponse.java         # 统一响应格式 {success, message, data}
-│           │   ├── LoginRequest.java        # 登录请求
-│           │   ├── LoginResponse.java       # 登录响应（含 JWT Token）
+│           │   ├── LoginRequest.java / LoginResponse.java  # 登录
 │           │   ├── RegisterRequest.java     # 注册请求
 │           │   ├── UserResponse.java        # 用户信息响应
 │           │   ├── DeviceResponse.java      # 设备信息响应
-│           │   ├── TimeSettingsResponse.java# 时间设置响应
-│           │   ├── BlockItemResponse.java   # 禁止项响应
-│           │   ├── UsageRecordResponse.java # 使用记录响应
-│           │   └── DashboardResponse.java   # 仪表盘数据响应
+│           │   ├── DashboardResponse.java   # 仪表盘数据响应
+│           │   └── ...                      # 其他各模块 DTO
 │           │
 │           ├── repository/           # ─── 数据访问层（Spring Data JPA）───
 │           │   ├── UserRepository.java
 │           │   ├── DeviceRepository.java
 │           │   ├── TimeSettingsRepository.java
 │           │   ├── BlockItemRepository.java
-│           │   └── UsageRecordRepository.java
+│           │   ├── ContentFilterRuleRepository.java
+│           │   ├── UsageRecordRepository.java
+│           │   ├── ApprovalRequestRepository.java
+│           │   ├── AlertRepository.java
+│           │   ├── GuardianBindingRepository.java
+│           │   ├── BiometricRecordRepository.java
+│           │   └── AuditLogRepository.java
 │           │
 │           ├── service/              # ─── 业务逻辑层 ───
 │           │   │                     #   接口定义
-│           │   ├── AuthService.java
-│           │   ├── DeviceService.java
-│           │   ├── TimeSettingsService.java
-│           │   ├── BlockListService.java
-│           │   ├── StatisticsService.java
+│           │   ├── AuthService.java + DeviceService.java
+│           │   ├── TimeSettingsService.java + BlockListService.java
+│           │   ├── FilterRuleService.java + StatisticsService.java
+│           │   ├── ApprovalRequestService.java + AlertService.java
+│           │   ├── BindingService.java + BiometricService.java
+│           │   ├── AuditLogService.java
 │           │   │
-│           │   └── impl/             #   接口实现
-│           │       ├── AuthServiceImpl.java
-│           │       ├── DeviceServiceImpl.java
-│           │       ├── TimeSettingsServiceImpl.java
-│           │       ├── BlockListServiceImpl.java
-│           │       └── StatisticsServiceImpl.java
+│           │   └── impl/             #   接口实现（11个 ServiceImpl）
 │           │
 │           └── controller/           # ─── 控制层（REST API）───
-│               ├── AuthController.java          # /api/auth/*      登录/注册
-│               ├── DeviceController.java        # /api/devices/*   设备 CRUD
+│               ├── AuthController.java          # /api/auth/*      登录/注册/密码修改/二次验证
+│               ├── DeviceController.java        # /api/devices/*   设备CRUD/锁定/解锁
 │               ├── TimeSettingsController.java  # /api/time-settings/* 时间设置
 │               ├── BlockListController.java     # /api/block-list/*   禁止列表
-│               └── StatisticsController.java    # /api/statistics/*   统计查询
+│               ├── FilterRuleController.java   # /api/filter-rules/* 内容过滤规则
+│               ├── StatisticsController.java    # /api/statistics/*   仪表盘+使用记录
+│               ├── ApprovalRequestController.java # /api/approvals/*  请求审批
+│               ├── AlertController.java        # /api/alerts/*      告警通知
+│               ├── BindingController.java      # /api/bindings/*    关系绑定
+│               ├── BiometricController.java    # /api/biometrics/*  生物特征
+│               ├── AuditLogController.java     # /api/audit-logs/*  审计日志
+│               ├── UserController.java         # /api/users/*       用户管理
+│               └── DataController.java         # /api/data/*        数据导出/清除
 │
 ├── frontend/                         # ███ 前端 - Vue 3 + TypeScript ███
 │   ├── index.html                   #   HTML 入口
@@ -271,8 +284,7 @@ guardian-baby/
 │       │
 │       ├── stores/                  #   Pinia 状态管理
 │       │   ├── user.ts              #     用户登录状态
-│       │   ├── devices.ts           #     设备列表状态
-│       │   └── settings.ts          #     应用设置状态
+│       │   └── devices.ts           #     设备列表状态
 │       │
 │       ├── api/
 │       │   └── index.ts             #   后端 API 统一封装
@@ -337,7 +349,7 @@ guardian-baby/
 | UI 样式 | TailwindCSS 3 |
 | 状态管理 | Pinia |
 | 路由 | Vue Router 4 |
-| 图表 | Chart.js + vue-chartjs |
+| 图表 | vue-echarts (ECharts) |
 | 图标 | Lucide Vue |
 | 后端框架 | Spring Boot 3.2 |
 | ORM | Spring Data JPA (Hibernate) |

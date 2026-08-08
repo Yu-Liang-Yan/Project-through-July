@@ -249,14 +249,14 @@ onMounted(async () => {
             <Download class="w-5 h-5 text-primary-600" /> 数据管理
           </h3>
           <div class="space-y-3">
-            <button @click="showPasswordVerify = true" class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <button @click="pendingAction = 'export'; showPasswordVerify = true" class="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div class="flex items-center gap-3">
                 <Download class="w-5 h-5 text-blue-500" />
                 <div class="text-left"><p class="font-medium text-gray-800">导出诊断信息包</p><p class="text-sm text-gray-500">端到端加密导出</p></div>
               </div>
               <span class="text-sm text-blue-500">导出</span>
             </button>
-            <button @click="showPasswordVerify = true" class="w-full flex items-center justify-between p-4 border border-red-200 rounded-lg hover:bg-red-50">
+            <button @click="pendingAction = 'clear'; showPasswordVerify = true" class="w-full flex items-center justify-between p-4 border border-red-200 rounded-lg hover:bg-red-50">
               <div class="flex items-center gap-3">
                 <Trash2 class="w-5 h-5 text-red-500" />
                 <div class="text-left"><p class="font-medium text-red-600">清除所有数据</p><p class="text-sm text-gray-500">清除所有使用记录和缓存</p></div>

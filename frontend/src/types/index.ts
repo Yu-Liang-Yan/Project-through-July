@@ -11,7 +11,7 @@ export interface Device {
   id: number
   name: string
   type: 'phone' | 'tablet' | 'computer' | 'watch' | 'reader'
-  status: 'online' | 'offline'
+  status: 'online' | 'offline' | 'LOCKED'
   lastActive: string
   registeredAt: string
 }
@@ -85,7 +85,7 @@ export interface ApprovalRequest {
   description: string
   extraMinutes?: number
   targetName?: string
-  status: 'PENDING' | 'APPROVED' | 'REJECTED'
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
   responseMessage?: string
   requesterName: string
   requesterId: number

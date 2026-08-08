@@ -6,7 +6,7 @@ import { useDevicesStore } from '@/stores/devices'
 import { api } from '@/api'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
-import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw } from '@lucide/vue'
+import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw, Lock, Unlock } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
@@ -38,6 +38,25 @@ const getDeviceLabel = (type: string) => {
   const device = deviceTypes.find(d => d.value === type)
   return device ? device.label : type
 }
+
+const statusClass = (s: string) => {
+  return s === 'online' ? 'bg-green-100 text-green-800'
+    : s === 'LOCKED' ? 'bg-orange-100 text-orange-800'
+    : 'bg-red-100 text-red-800'
+}
+
+const statusDot = (s: string) => {
+  return s === 'online' ? 'bg-green-500'
+    : s === 'LOCKED' ? 'bg-orange-500'
+    : 'bg-red-500'
+}
+
+const statusLabel = (s: string) => {
+  return s === 'online' ? '在线' : s === 'LOCKED' ? '已锁定' : '离线'
+}
+
+const canToggleLock = (s: string) => s === 'online' || s === 'LOCKED'
+const isLocked = (s: string) => s === 'LOCKED'
 
 const { toast } = useToast()
 
@@ -106,6 +125,30 @@ const removeDevice = async (id: number) => {
   }
 }
 
+const lockDevice = async (id: number) => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.devices.lock(id, uid)
+    if (res.success && res.data) {
+      const idx = devicesStore.devices.findIndex(d => d.id === id)
+      if (idx >= 0) devicesStore.devices[idx] = res.data
+      toast('设备已锁定', 'info')
+    }
+  } catch (e) { toast('锁定失败', 'error') }
+}
+
+const unlockDevice = async (id: number) => {
+  const uid = userStore.currentUser?.id ?? 1
+  try {
+    const res = await api.devices.unlock(id, uid)
+    if (res.success && res.data) {
+      const idx = devicesStore.devices.findIndex(d => d.id === id)
+      if (idx >= 0) devicesStore.devices[idx] = res.data
+      toast('设备已解锁', 'info')
+    }
+  } catch (e) { toast('解锁失败', 'error') }
+}
+
 onMounted(async () => {
   userStore.loadFromStorage()
   if (!userStore.isLoggedIn) {
@@ -140,7 +183,7 @@ onMounted(async () => {
             class="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors disabled:opacity-50"
           >
             <RefreshCw :class="['w-5 h-5', isScanning ? 'animate-spin' : '']" />
-            {{ isScanning ? '扫描中...' : '扫描设备' }}
+            {{ isScanning ? '扫描中...' : '扫描设备(演示)' }}
           </button>
           <button
             @click="showAddModal = true"
@@ -187,26 +230,32 @@ onMounted(async () => {
                   <span class="text-sm text-gray-600">{{ getDeviceLabel(device.type) }}</span>
                 </td>
                 <td class="py-4 px-4">
-                  <span
-                    :class="[
-                      'inline-flex items-center px-2 py-1 text-xs font-medium rounded',
-                      device.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    ]"
-                  >
-                    <span :class="['w-2 h-2 rounded-full mr-1', device.status === 'online' ? 'bg-green-500' : 'bg-red-500']"></span>
-                    {{ device.status === 'online' ? '在线' : '离线' }}
+                  <span :class="['inline-flex items-center px-2 py-1 text-xs font-medium rounded', statusClass(device.status)]">
+                    <span :class="['w-2 h-2 rounded-full mr-1', statusDot(device.status)]"></span>
+                    {{ statusLabel(device.status) }}
                   </span>
                 </td>
                 <td class="py-4 px-4">
                   <span class="text-sm text-gray-500">{{ new Date(device.lastActive).toLocaleString() }}</span>
                 </td>
                 <td class="py-4 px-4">
-                  <button
-                    @click="removeDevice(device.id)"
-                    class="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 class="w-5 h-5" />
-                  </button>
+                  <div class="flex items-center gap-1">
+                    <button v-if="canToggleLock(device.status)"
+                      @click="isLocked(device.status) ? unlockDevice(device.id) : lockDevice(device.id)"
+                      :class="['p-2 rounded-lg transition-colors', isLocked(device.status) ? 'text-green-500 hover:bg-green-50' : 'text-orange-500 hover:bg-orange-50']"
+                      :title="isLocked(device.status) ? '解锁' : '锁定'"
+                    >
+                      <Unlock v-if="isLocked(device.status)" class="w-5 h-5" />
+                      <Lock v-else class="w-5 h-5" />
+                    </button>
+                    <button
+                      @click="removeDevice(device.id)"
+                      class="text-red-500 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      title="移除"
+                    >
+                      <Trash2 class="w-5 h-5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>

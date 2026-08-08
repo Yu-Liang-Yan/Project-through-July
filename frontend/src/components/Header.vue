@@ -15,6 +15,8 @@ const notifications = [
   { id: 2, message: '新设备已加入监控', time: '1小时前', type: 'success' },
   { id: 3, message: '检测到违规访问', time: '2小时前', type: 'error' }
 ]
+
+const hasNewNotif = ref(true)
 </script>
 
 <template>
@@ -42,7 +44,7 @@ const notifications = [
             class="relative w-10 h-10 bg-white border border-gray-300 rounded-lg flex items-center justify-center hover:bg-gray-50 transition-colors"
           >
             <Bell class="w-5 h-5 text-gray-600" />
-            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" v-if="hasNewNotif"></span>
           </button>
 
           <Transition name="dropdown">
@@ -51,7 +53,7 @@ const notifications = [
               class="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-50"
             >
               <div class="p-3 border-b border-gray-100">
-                <h3 class="font-medium text-gray-800">通知</h3>
+                <h3 class="font-medium text-gray-800">通知（演示）</h3>
               </div>
               <ul class="max-h-64 overflow-y-auto">
                 <li
