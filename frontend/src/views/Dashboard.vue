@@ -14,11 +14,14 @@ import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from
 import { CanvasRenderer } from 'echarts/renderers'
 import { Clock, ArrowRight, Users, Wifi, Bell, Activity, Shield, AlertTriangle } from '@lucide/vue'
 
+import { useWebSocket } from '@/composables/useWebSocket'
+
 use([PieChart, BarChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
 const router = useRouter()
 const userStore = useUserStore()
 const loading = ref(true)
+const { onMessage } = useWebSocket()
 
 function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600)
@@ -89,10 +92,7 @@ const typeLabel = (t: string) => {
   return map[t] || t
 }
 
-onMounted(async () => {
-  userStore.loadFromStorage()
-  if (!userStore.isLoggedIn) { router.push('/'); return }
-
+const loadData = async () => {
   const uid = userStore.currentUser?.id ?? 1
   try {
     const [dashRes, usageRes] = await Promise.all([
@@ -109,7 +109,22 @@ onMounted(async () => {
       }))
     }
   } catch (e) { console.error('Dashboard fetch error:', e) }
-  finally { loading.value = false }
+}
+
+onMounted(async () => {
+  userStore.loadFromStorage()
+  if (!userStore.isLoggedIn) { router.push('/'); return }
+
+  loading.value = true
+  await loadData()
+  loading.value = false
+
+  // WS auto-refresh
+  onMessage((type) => {
+    if (type === 'ALERT' || type === 'DEVICE_STATUS' || type === 'APPROVAL_RESULT') {
+      loadData()
+    }
+  })
 })
 </script>
 

@@ -53,7 +53,7 @@ const hasNewNotif = ref(true)
               class="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-50"
             >
               <div class="p-3 border-b border-gray-100">
-                <h3 class="font-medium text-gray-800">通知（演示）</h3>
+                <h3 class="font-medium text-gray-800">通知</h3>
               </div>
               <ul class="max-h-64 overflow-y-auto">
                 <li

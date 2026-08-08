@@ -35,12 +35,28 @@ public class BiometricController {
         return ApiResponse.ok(biometricService.setStatus(id, active));
     }
 
+    @PostMapping("/challenge")
+    public ApiResponse<Map<String, String>> challenge(@RequestBody Map<String, Object> body) {
+        Long userId = Long.valueOf(body.get("userId").toString());
+        Map<String, String> result = biometricService.generateChallenge(userId);
+        return ApiResponse.ok("验证码已生成", result);
+    }
+
     @PostMapping("/verify")
-    public ApiResponse<Boolean> verify(@RequestBody Map<String, String> body) {
-        boolean passed = biometricService.verify(
-                Long.valueOf(body.get("userId")),
-                body.get("type")
-        );
+    public ApiResponse<Boolean> verify(@RequestBody Map<String, Object> body) {
+        Long userId = Long.valueOf(body.get("userId").toString());
+        String challengeId = (String) body.get("challengeId");
+        String code = (String) body.get("code");
+
+        if (challengeId != null && code != null) {
+            // 质询-验证模式
+            boolean passed = biometricService.verifyChallenge(challengeId, code, userId);
+            return ApiResponse.ok(passed ? "生物验证通过" : "验证码错误或已过期", passed);
+        }
+
+        // 旧版简单验证
+        String type = (String) body.get("type");
+        boolean passed = biometricService.verify(userId, type);
         return ApiResponse.ok(passed ? "验证通过" : "验证失败", passed);
     }
 }

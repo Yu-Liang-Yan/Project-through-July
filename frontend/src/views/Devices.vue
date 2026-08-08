@@ -9,6 +9,7 @@ import Header from '@/components/Header.vue'
 import { Search, Plus, Smartphone, Tablet, Laptop, Watch, BookOpen, Trash2, RefreshCw, Lock, Unlock } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
 import { useWebSocket } from '@/composables/useWebSocket'
+import VerificationDialog from '@/components/VerificationDialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -16,6 +17,8 @@ const devicesStore = useDevicesStore()
 
 const isScanning = ref(false)
 const showAddModal = ref(false)
+const showVerification = ref(false)
+const pendingAction = ref<(() => void) | null>(null)
 const searchQuery = ref('')
 const newDevice = ref({
   name: '',
@@ -138,6 +141,16 @@ const removeDevice = async (id: number) => {
 }
 
 const lockDevice = async (id: number) => {
+  pendingAction.value = () => doLock(id)
+  showVerification.value = true
+}
+
+const unlockDevice = async (id: number) => {
+  pendingAction.value = () => doUnlock(id)
+  showVerification.value = true
+}
+
+const doLock = async (id: number) => {
   const uid = userStore.currentUser?.id ?? 1
   try {
     const res = await api.devices.lock(id, uid)
@@ -149,7 +162,7 @@ const lockDevice = async (id: number) => {
   } catch (e) { toast('锁定失败', 'error') }
 }
 
-const unlockDevice = async (id: number) => {
+const doUnlock = async (id: number) => {
   const uid = userStore.currentUser?.id ?? 1
   try {
     const res = await api.devices.unlock(id, uid)
@@ -159,6 +172,12 @@ const unlockDevice = async (id: number) => {
       toast('设备已解锁', 'info')
     }
   } catch (e) { toast('解锁失败', 'error') }
+}
+
+const handleVerified = () => {
+  showVerification.value = false
+  pendingAction.value?.()
+  pendingAction.value = null
 }
 
 onMounted(async () => {
@@ -332,4 +351,10 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+
+  <VerificationDialog
+    v-if="showVerification"
+    @verified="handleVerified"
+    @cancel="showVerification = false; pendingAction = null"
+  />
 </template>

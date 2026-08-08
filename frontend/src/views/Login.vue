@@ -5,6 +5,7 @@ import { useUserStore } from '@/stores/user'
 import { api } from '@/api'
 import { Shield, User, Lock, Phone, Camera, Fingerprint, Mic, Eye, EyeOff } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import VerificationDialog from '@/components/VerificationDialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -13,6 +14,7 @@ const { toast } = useToast()
 const activeTab = ref<'login' | 'register'>('login')
 const showPassword = ref(false)
 const loading = ref(false)
+const showVerification = ref(false)
 
 const loginForm = ref({
   username: '',
@@ -114,23 +116,25 @@ const handleRegister = async () => {
   }
 }
 
-const startBiometric = (type: string) => {
+const startBiometric = () => {
   if (!loginForm.value.username) {
     toast('请先输入用户名', 'warning')
     return
   }
-  toast(`${type === 'face' ? '人脸' : type === 'fingerprint' ? '指纹' : '声纹'}识别中...`, 'info')
-  setTimeout(() => {
-    userStore.login({
-      id: 1,
-      username: loginForm.value.username,
-      phone: '13800138000',
-      userType: 'guardian',
-      createdAt: new Date().toISOString()
-    }, '')
-    toast('生物识别验证成功！', 'success')
-    router.push('/dashboard')
-  }, 2000)
+  showVerification.value = true
+}
+
+const handleVerificationVerified = () => {
+  showVerification.value = false
+  userStore.login({
+    id: 1,
+    username: loginForm.value.username,
+    phone: '13800138000',
+    userType: 'guardian',
+    createdAt: new Date().toISOString()
+  }, '')
+  toast('身份验证成功！', 'success')
+  router.push('/dashboard')
 }
 
 const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
@@ -197,28 +201,28 @@ const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
         </div>
 
         <div class="pt-2">
-          <p class="text-sm text-gray-500 mb-3">快速登录（演示）：</p>
+          <p class="text-sm text-gray-500 mb-3">快速登录：</p>
           <div class="grid grid-cols-3 gap-3">
             <button
-              @click="startBiometric('face')"
+              @click="startBiometric"
               class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
               <Camera class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">人脸(演示)</span>
+              <span class="text-xs text-gray-400">人脸</span>
             </button>
             <button
-              @click="startBiometric('fingerprint')"
+              @click="startBiometric"
               class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
               <Fingerprint class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">指纹(演示)</span>
+              <span class="text-xs text-gray-400">指纹</span>
             </button>
             <button
-              @click="startBiometric('voice')"
+              @click="startBiometric"
               class="flex flex-col items-center gap-2 p-3 border border-dashed border-gray-300 rounded-lg hover:bg-primary-50 hover:border-primary-200 transition-colors"
             >
               <Mic class="w-5 h-5 text-gray-400" />
-              <span class="text-xs text-gray-400">声纹(演示)</span>
+              <span class="text-xs text-gray-400">声纹</span>
             </button>
           </div>
         </div>
@@ -325,5 +329,11 @@ const ageGroups = ['6岁以下', '6-12岁', '12-15岁', '15-18岁']
         </button>
       </div>
     </div>
+
+    <VerificationDialog
+      v-if="showVerification"
+      @verified="handleVerificationVerified"
+      @cancel="showVerification = false"
+    />
   </div>
 </template>

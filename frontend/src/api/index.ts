@@ -270,6 +270,18 @@ export const api = {
         `${BASE_URL}/biometrics/verify`,
         { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId: String(userId), type }) }
       ),
+
+    challenge: (userId: number) =>
+      request<{ challengeId: string; code: string }>(
+        `${BASE_URL}/biometrics/challenge`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId }) }
+      ),
+
+    verifyChallenge: (userId: number, challengeId: string, code: string) =>
+      request<boolean>(
+        `${BASE_URL}/biometrics/verify`,
+        { method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId, challengeId, code }) }
+      ),
   },
 
   // ======================== auditLogs ========================
