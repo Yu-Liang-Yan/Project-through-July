@@ -46,7 +46,7 @@ public class Device {
     }
 
     public enum DeviceStatus {
-        ONLINE, OFFLINE
+        ONLINE, OFFLINE, LOCKED
     }
 
     @PrePersist

@@ -11,4 +11,8 @@ public interface DeviceService {
     DeviceResponse addDevice(Long userId, String name, String type);
 
     void removeDevice(Long deviceId, Long userId);
+
+    DeviceResponse lockDevice(Long deviceId, Long userId);
+
+    DeviceResponse unlockDevice(Long deviceId, Long userId);
 }

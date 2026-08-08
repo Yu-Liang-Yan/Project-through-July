@@ -7,6 +7,7 @@ import com.guardianbaby.entity.User;
 import com.guardianbaby.repository.BlockItemRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.BlockListService;
+import com.guardianbaby.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class BlockListServiceImpl implements BlockListService {
 
     private final BlockItemRepository blockItemRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     public List<BlockItemResponse> listByType(Long userId, String type) {
@@ -57,5 +59,6 @@ public class BlockListServiceImpl implements BlockListService {
         }
 
         blockItemRepository.delete(item);
+        auditLogService.log(userId, "REMOVE_BLOCK", "移除禁止项 #" + itemId, "system");
     }
 }

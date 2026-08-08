@@ -9,6 +9,7 @@ import com.guardianbaby.entity.User;
 import com.guardianbaby.repository.ContentFilterRuleRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.FilterRuleService;
+import com.guardianbaby.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class FilterRuleServiceImpl implements FilterRuleService {
 
     private final ContentFilterRuleRepository filterRuleRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -38,7 +40,9 @@ public class FilterRuleServiceImpl implements FilterRuleService {
                 .enabled(true)
                 .createdAt(LocalDateTime.now())
                 .build();
-        return FilterRuleResponse.fromEntity(filterRuleRepository.save(rule));
+        ContentFilterRule saved = filterRuleRepository.save(rule);
+        auditLogService.log(userId, "ADD_FILTER", "添加过滤规则: " + pattern + " [" + category + "]", "system");
+        return FilterRuleResponse.fromEntity(saved);
     }
 
     @Override
@@ -64,5 +68,6 @@ public class FilterRuleServiceImpl implements FilterRuleService {
             throw new BusinessException("过滤规则不存在");
         }
         filterRuleRepository.deleteById(ruleId);
+        auditLogService.log(0L, "REMOVE_FILTER", "删除过滤规则 #" + ruleId, "system");
     }
 }

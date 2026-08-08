@@ -2,6 +2,7 @@ package com.guardianbaby.repository;
 
 import com.guardianbaby.entity.UsageRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -23,7 +24,6 @@ public interface UsageRecordRepository extends JpaRepository<UsageRecord, Long> 
     long countByUserId(Long userId);
 
     @Modifying
-    @Transactional
     @Query("DELETE FROM UsageRecord u WHERE u.user.id = :userId")
     int deleteByUserId(@Param("userId") Long userId);
 }

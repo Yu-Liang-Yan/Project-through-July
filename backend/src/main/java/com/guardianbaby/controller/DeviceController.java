@@ -37,4 +37,16 @@ public class DeviceController {
         deviceService.removeDevice(id, userId);
         return ApiResponse.ok("设备已移除", null);
     }
+
+    @PutMapping("/{id}/lock")
+    public ApiResponse<DeviceResponse> lock(@PathVariable Long id,
+                                            @RequestParam Long userId) {
+        return ApiResponse.ok("设备已锁定", deviceService.lockDevice(id, userId));
+    }
+
+    @PutMapping("/{id}/unlock")
+    public ApiResponse<DeviceResponse> unlock(@PathVariable Long id,
+                                              @RequestParam Long userId) {
+        return ApiResponse.ok("设备已解锁", deviceService.unlockDevice(id, userId));
+    }
 }

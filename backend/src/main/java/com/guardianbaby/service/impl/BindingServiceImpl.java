@@ -9,6 +9,8 @@ import com.guardianbaby.entity.User.UserType;
 import com.guardianbaby.repository.GuardianBindingRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.BindingService;
+import com.guardianbaby.service.AuditLogService;
+import com.guardianbaby.service.AlertService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ public class BindingServiceImpl implements BindingService {
 
     private final GuardianBindingRepository bindingRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
+    private final AlertService alertService;
 
     @Override
     @Transactional
@@ -48,7 +52,11 @@ public class BindingServiceImpl implements BindingService {
                 .status(BindingStatus.ACTIVE)
                 .createdAt(LocalDateTime.now())
                 .build();
-        return BindingResponse.fromEntity(bindingRepository.save(binding));
+        BindingResponse response = BindingResponse.fromEntity(bindingRepository.save(binding));
+        auditLogService.log(guardianId, "BIND", "绑定被保护用户 #" + protectedUserId, "system");
+        alertService.create(protectedUserId, "SYSTEM", "LOW",
+            "新的监护关系", guardian.getUsername() + " 已成为你的监护人");
+        return response;
     }
 
     @Override
@@ -58,6 +66,7 @@ public class BindingServiceImpl implements BindingService {
             throw new BusinessException("绑定关系不存在");
         }
         bindingRepository.deleteById(bindingId);
+        auditLogService.log(0L, "UNBIND", "解除绑定 #" + bindingId, "system");
     }
 
     @Override

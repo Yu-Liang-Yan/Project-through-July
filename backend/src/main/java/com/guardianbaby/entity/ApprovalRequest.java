@@ -66,7 +66,7 @@ public class ApprovalRequest {
     }
 
     public enum ApprovalStatus {
-        PENDING, APPROVED, REJECTED
+        PENDING, APPROVED, REJECTED, EXPIRED
     }
 
     @PrePersist

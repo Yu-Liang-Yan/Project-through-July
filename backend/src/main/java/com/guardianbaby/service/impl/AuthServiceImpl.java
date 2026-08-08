@@ -35,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
-        auditLogService.log(user.getId(), "LOGIN", "用户登录系统", request.getUsername());
+        auditLogService.log(user.getId(), "LOGIN", "用户登录系统", "system");
 
         return LoginResponse.builder()
                 .id(user.getId())
@@ -88,6 +88,6 @@ public class AuthServiceImpl implements AuthService {
         }
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
-        auditLogService.log(userId, "changePassword", "用户修改密码", "127.0.0.1");
+        auditLogService.log(userId, "PASSWORD_CHANGE", "修改密码", "system");
     }
 }

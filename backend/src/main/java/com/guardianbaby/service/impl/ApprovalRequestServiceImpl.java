@@ -12,6 +12,8 @@ import com.guardianbaby.repository.ApprovalRequestRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.ApprovalRequestService;
 import com.guardianbaby.service.AuditLogService;
+import com.guardianbaby.service.AlertService;
+import com.guardianbaby.service.TimeSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,8 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
     private final ApprovalRequestRepository approvalRequestRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final TimeSettingsService timeSettingsService;
+    private final AlertService alertService;
 
     @Override
     @Transactional
@@ -45,18 +49,27 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
                 .requester(requester)
                 .build();
         approvalRequestRepository.save(ar);
+        auditLogService.log(dto.getRequesterId(), "SUBMIT_REQUEST", "提交请求: " + dto.getDescription(), "system");
 
         return ApprovalRequestResponse.fromEntity(ar);
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public List<ApprovalRequestResponse> listPending(Long guardianId) {
         List<ApprovalRequest> all = approvalRequestRepository.findAllByOrderByCreatedAtDesc();
+        LocalDateTime expiryThreshold = LocalDateTime.now().minusHours(24);
         return all.stream()
                 .filter(a -> a.getStatus() == ApprovalStatus.PENDING)
                 .filter(a -> a.getRequester().getUserType() == UserType.PROTECTED)
-                .map(ApprovalRequestResponse::fromEntity)
+                .map(a -> {
+                    // Check expiry
+                    if (a.getCreatedAt() != null && a.getCreatedAt().isBefore(expiryThreshold)) {
+                        a.setStatus(ApprovalStatus.EXPIRED);
+                        approvalRequestRepository.save(a);
+                    }
+                    return ApprovalRequestResponse.fromEntity(a);
+                })
                 .toList();
     }
 
@@ -89,6 +102,32 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
         ar.setResponseMessage(message);
         ar.setReviewedAt(LocalDateTime.now());
         approvalRequestRepository.save(ar);
+        auditLogService.log(reviewerId, "APPROVE", "批准请求 #" + requestId, "system");
+
+        // Execute the approved action
+        if (ar.getApprovalType() == ApprovalType.TIME_EXTENSION && ar.getExtraMinutes() != null) {
+            try {
+                int extraMins = ar.getExtraMinutes();
+                int extraHours = extraMins / 60;
+                int extraRemainder = extraMins % 60;
+                timeSettingsService.update(
+                    ar.getRequester().getId(),
+                    extraHours, extraRemainder,
+                    null, null, null, null
+                );
+                alertService.create(
+                    ar.getRequester().getId(),
+                    "TIME_EXCEEDED", "LOW",
+                    "时长已延长", ar.getRequester().getUsername() + " 的每日时长已延长 " + extraMins + " 分钟"
+                );
+            } catch (Exception ignored) { /* silent fail on time settings update */ }
+        } else if (ar.getApprovalType() == ApprovalType.UNBLOCK) {
+            alertService.create(
+                ar.getRequester().getId(),
+                "BLOCKED_CONTENT", "MEDIUM",
+                "解除封锁已批准", ar.getTargetName() + " 已被监护人解除封锁"
+            );
+        }
 
         return ApprovalRequestResponse.fromEntity(ar);
     }
@@ -114,7 +153,7 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
         ar.setReviewedAt(LocalDateTime.now());
         approvalRequestRepository.save(ar);
 
-        auditLogService.log(reviewerId, "REJECT", "拒绝请求 #" + requestId + ": " + reason, "127.0.0.1");
+        auditLogService.log(reviewerId, "REJECT", "拒绝请求 #" + requestId + ": " + reason, "system");
 
         return ApprovalRequestResponse.fromEntity(ar);
     }

@@ -9,6 +9,7 @@ import com.guardianbaby.entity.User;
 import com.guardianbaby.repository.*;
 import com.guardianbaby.service.StatisticsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -61,6 +62,7 @@ public class DataController {
         return ApiResponse.ok("导出成功", data);
     }
 
+    @Transactional
     @DeleteMapping("/clear")
     public ApiResponse<?> clearData(@RequestParam Long userId) {
         int usageDeleted = usageRecordRepository.deleteByUserId(userId);

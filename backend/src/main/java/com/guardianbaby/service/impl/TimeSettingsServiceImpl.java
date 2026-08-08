@@ -6,6 +6,7 @@ import com.guardianbaby.entity.User;
 import com.guardianbaby.repository.TimeSettingsRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.TimeSettingsService;
+import com.guardianbaby.service.AuditLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +20,7 @@ public class TimeSettingsServiceImpl implements TimeSettingsService {
 
     private final TimeSettingsRepository timeSettingsRepository;
     private final UserRepository userRepository;
+    private final AuditLogService auditLogService;
 
     @Override
     public TimeSettingsResponse getByUserId(Long userId) {
@@ -36,13 +38,14 @@ public class TimeSettingsServiceImpl implements TimeSettingsService {
         TimeSettings ts = timeSettingsRepository.findByUserId(userId)
                 .orElseGet(() -> createDefault(userId));
 
-        ts.setDailyHours(dailyHours);
-        ts.setDailyMinutes(dailyMinutes);
-        ts.setStartTime(startTime);
-        ts.setEndTime(endTime);
-        ts.setWeeklyLimit(weeklyLimit);
-        ts.setMonthlyLimit(monthlyLimit);
+        if (dailyHours != null) ts.setDailyHours(dailyHours);
+        if (dailyMinutes != null) ts.setDailyMinutes(dailyMinutes);
+        if (startTime != null) ts.setStartTime(startTime);
+        if (endTime != null) ts.setEndTime(endTime);
+        if (weeklyLimit != null) ts.setWeeklyLimit(weeklyLimit);
+        if (monthlyLimit != null) ts.setMonthlyLimit(monthlyLimit);
         timeSettingsRepository.save(ts);
+        auditLogService.log(userId, "TIME_SETTINGS", "更新时间设置: " + dailyHours + "h" + dailyMinutes + "m/天", "system");
 
         return TimeSettingsResponse.fromEntity(ts);
     }

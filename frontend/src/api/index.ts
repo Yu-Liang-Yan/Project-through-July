@@ -93,6 +93,18 @@ export const api = {
         `${BASE_URL}/devices/${id}?userId=${userId}`,
         { method: 'DELETE', headers: authHeaders() }
       ),
+
+    lock: (id: number, userId: number) =>
+      request<Device>(
+        `${BASE_URL}/devices/${id}/lock?userId=${userId}`,
+        { method: 'PUT', headers: authHeaders() }
+      ),
+
+    unlock: (id: number, userId: number) =>
+      request<Device>(
+        `${BASE_URL}/devices/${id}/unlock?userId=${userId}`,
+        { method: 'PUT', headers: authHeaders() }
+      ),
   },
 
   // ======================== timeSettings ========================
