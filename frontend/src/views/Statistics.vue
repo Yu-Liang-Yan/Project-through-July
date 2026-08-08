@@ -12,6 +12,7 @@ import { BarChart, PieChart } from 'echarts/charts'
 import { TitleComponent, TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import { Activity } from '@lucide/vue'
+import { useWebSocket } from '@/composables/useWebSocket'
 
 use([BarChart, PieChart, TitleComponent, TooltipComponent, LegendComponent, GridComponent, CanvasRenderer])
 
@@ -20,6 +21,7 @@ const userStore = useUserStore()
 const loading = ref(true)
 const activePeriod = ref<'day' | 'week' | 'month'>('day')
 const usageRecords = ref<UsageRecord[]>([])
+const { onMessage } = useWebSocket()
 
 const periods = [{ value: 'day' as const, label: '今日' }, { value: 'week' as const, label: '本周' }, { value: 'month' as const, label: '本月' }]
 
@@ -90,6 +92,10 @@ onMounted(async () => {
   userStore.loadFromStorage()
   if (!userStore.isLoggedIn) { router.push('/'); return }
   await loadRecords()
+
+  onMessage((type) => {
+    if (type === 'DEVICE_STATUS' || type === 'APPROVAL_RESULT') loadRecords()
+  })
 })
 </script>
 

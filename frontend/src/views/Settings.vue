@@ -6,14 +6,16 @@ import { api } from '@/api'
 import type { BiometricRecord } from '@/types'
 import Sidebar from '@/components/Sidebar.vue'
 import Header from '@/components/Header.vue'
-import { Camera, Fingerprint, Mic, Keyboard, Shield, Download, Trash2, ToggleLeft, ToggleRight, Key, User, Phone } from '@lucide/vue'
+import { Camera, Fingerprint, Mic, Keyboard, Shield, Download, Trash2, ToggleLeft, ToggleRight, Key, User, Phone, Play } from '@lucide/vue'
 import { useToast } from '@/composables/useToast'
+import VerificationDialog from '@/components/VerificationDialog.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const biometrics = ref<BiometricRecord[]>([])
 const passwordInput = ref('')
 const showPasswordVerify = ref(false)
+const showVerification = ref(false)
 
 // Password change
 const showChangePassword = ref(false)
@@ -115,6 +117,10 @@ const toggleBiometric = async (type: string) => {
   } catch (e) { toast('操作失败', 'error') }
 }
 
+const testVerification = () => { showVerification.value = true }
+
+const handleVerified = () => { showVerification.value = false; toast('生物验证测试通过', 'success') }
+
 const handleChangePassword = async () => {
   if (!oldPassword.value || !newPassword.value) { toast('请填写所有字段', 'warning'); return }
   if (newPassword.value !== confirmPassword.value) { toast('两次密码不一致', 'warning'); return }
@@ -203,6 +209,13 @@ onMounted(async () => {
             <Camera class="w-5 h-5 text-primary-600" /> 生物特征管理
           </h3>
           <p class="text-sm text-gray-500 mb-4">按优先级排序：人脸 &gt; 虹膜 &gt; 指纹 &gt; 声纹 &gt; 按键习惯</p>
+          <div class="mb-4">
+            <button @click="testVerification" :disabled="biometrics.every(b => b.status !== 'ACTIVE')"
+              class="flex items-center gap-2 px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              :title="biometrics.every(b => b.status !== 'ACTIVE') ? '请先注册并启用一个生物特征' : ''">
+              <Play class="w-4 h-4" /> 测试验证
+            </button>
+          </div>
           <div class="space-y-3">
             <div v-for="bio in biometricTypes" :key="bio.type" class="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
               <div class="flex items-center gap-3">
@@ -324,4 +337,10 @@ onMounted(async () => {
       </div>
     </div>
   </div>
+
+  <VerificationDialog
+    v-if="showVerification"
+    @verified="handleVerified"
+    @cancel="showVerification = false"
+  />
 </template>
