@@ -2,12 +2,14 @@
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useWebSocket } from '@/composables/useWebSocket'
 import { Shield, Home, Laptop, Clock, Ban, BarChart3, Settings, LogOut, UserCircle, CheckCircle, Bell, Users, Filter, FileText } from '@lucide/vue'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const isMobileMenuOpen = ref(false)
+const { pendingApprovalCount, unreadAlertCount } = useWebSocket()
 
 const navItems = [
   { path: '/dashboard', label: '仪表盘', icon: Home },
@@ -16,8 +18,8 @@ const navItems = [
   { path: '/block-list', label: '禁止列表', icon: Ban },
   { path: '/statistics', label: '使用统计', icon: BarChart3 },
   { path: '/settings', label: '设置', icon: Settings },
-  { path: '/approvals', label: '请求审批', icon: CheckCircle },
-  { path: '/alerts', label: '告警通知', icon: Bell },
+  { path: '/approvals', label: '请求审批', icon: CheckCircle, badge: pendingApprovalCount },
+  { path: '/alerts', label: '告警通知', icon: Bell, badge: unreadAlertCount },
   { path: '/relationships', label: '关系管理', icon: Users },
   { path: '/content-filters', label: '内容过滤', icon: Filter },
   { path: '/audit-logs', label: '操作日志', icon: FileText },
@@ -82,12 +84,15 @@ const userTypeLabel = computed(() => {
           <button
             @click="navigate(item.path)"
             :class="[
-              'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200',
+              'w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors duration-200 relative',
               isActive(item.path) ? 'bg-primary-600 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
             ]"
           >
             <component :is="item.icon" class="w-5 h-5" />
             <span class="font-medium">{{ item.label }}</span>
+            <span v-if="item.badge && item.badge.value > 0"
+              class="absolute right-3 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"
+            >{{ item.badge.value }}</span>
           </button>
         </li>
       </ul>

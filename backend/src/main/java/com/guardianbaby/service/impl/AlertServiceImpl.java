@@ -12,6 +12,7 @@ import com.guardianbaby.repository.AlertRepository;
 import com.guardianbaby.repository.GuardianBindingRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.AlertService;
+import com.guardianbaby.websocket.WebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class AlertServiceImpl implements AlertService {
     private final AlertRepository alertRepository;
     private final UserRepository userRepository;
     private final GuardianBindingRepository bindingRepository;
+    private final WebSocketPushService pushService;
 
     @Override
     @Transactional
@@ -47,7 +49,14 @@ public class AlertServiceImpl implements AlertService {
                 .status(AlertStatus.NEW)
                 .createdAt(LocalDateTime.now())
                 .build();
-        return AlertResponse.fromEntity(alertRepository.save(alert));
+        AlertResponse response = AlertResponse.fromEntity(alertRepository.save(alert));
+
+        // WebSocket push to guardian
+        if (guardian != null) {
+            pushService.push(guardian.getId(), "ALERT", response);
+        }
+
+        return response;
     }
 
     @Override

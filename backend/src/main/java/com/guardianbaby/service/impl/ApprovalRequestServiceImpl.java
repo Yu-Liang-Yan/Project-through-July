@@ -9,11 +9,13 @@ import com.guardianbaby.entity.ApprovalRequest.ApprovalType;
 import com.guardianbaby.entity.User;
 import com.guardianbaby.entity.User.UserType;
 import com.guardianbaby.repository.ApprovalRequestRepository;
+import com.guardianbaby.repository.GuardianBindingRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.ApprovalRequestService;
 import com.guardianbaby.service.AuditLogService;
 import com.guardianbaby.service.AlertService;
 import com.guardianbaby.service.TimeSettingsService;
+import com.guardianbaby.websocket.WebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,8 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
     private final AuditLogService auditLogService;
     private final TimeSettingsService timeSettingsService;
     private final AlertService alertService;
+    private final WebSocketPushService pushService;
+    private final GuardianBindingRepository bindingRepository;
 
     @Override
     @Transactional
@@ -51,7 +55,13 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
         approvalRequestRepository.save(ar);
         auditLogService.log(dto.getRequesterId(), "SUBMIT_REQUEST", "提交请求: " + dto.getDescription(), "system");
 
-        return ApprovalRequestResponse.fromEntity(ar);
+        // WebSocket push to all guardians
+        var response = ApprovalRequestResponse.fromEntity(ar);
+        bindingRepository.findByProtectedUserId(dto.getRequesterId()).stream()
+                .map(b -> b.getGuardian().getId())
+                .forEach(gid -> pushService.push(gid, "APPROVAL_NEW", response));
+
+        return response;
     }
 
     @Override
@@ -104,6 +114,10 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
         approvalRequestRepository.save(ar);
         auditLogService.log(reviewerId, "APPROVE", "批准请求 #" + requestId, "system");
 
+        // WebSocket push to requester
+        var arResponse = ApprovalRequestResponse.fromEntity(ar);
+        pushService.push(ar.getRequester().getId(), "APPROVAL_RESULT", arResponse);
+
         // Execute the approved action
         if (ar.getApprovalType() == ApprovalType.TIME_EXTENSION && ar.getExtraMinutes() != null) {
             try {
@@ -129,7 +143,7 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
             );
         }
 
-        return ApprovalRequestResponse.fromEntity(ar);
+        return arResponse;
     }
 
     @Override
@@ -155,7 +169,11 @@ public class ApprovalRequestServiceImpl implements ApprovalRequestService {
 
         auditLogService.log(reviewerId, "REJECT", "拒绝请求 #" + requestId + ": " + reason, "system");
 
-        return ApprovalRequestResponse.fromEntity(ar);
+        // WebSocket push to requester
+        var rejResponse = ApprovalRequestResponse.fromEntity(ar);
+        pushService.push(ar.getRequester().getId(), "APPROVAL_RESULT", rejResponse);
+
+        return rejResponse;
     }
 
     @Override

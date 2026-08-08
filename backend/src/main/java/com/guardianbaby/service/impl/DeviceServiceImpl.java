@@ -8,6 +8,7 @@ import com.guardianbaby.repository.DeviceRepository;
 import com.guardianbaby.repository.UserRepository;
 import com.guardianbaby.service.DeviceService;
 import com.guardianbaby.service.AuditLogService;
+import com.guardianbaby.websocket.WebSocketPushService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class DeviceServiceImpl implements DeviceService {
     private final DeviceRepository deviceRepository;
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final WebSocketPushService pushService;
 
     @Override
     public List<DeviceResponse> listDevices(Long userId) {
@@ -74,7 +76,9 @@ public class DeviceServiceImpl implements DeviceService {
         device.setStatus(Device.DeviceStatus.LOCKED);
         deviceRepository.save(device);
         auditLogService.log(userId, "LOCK_DEVICE", "锁定设备 #" + deviceId, "system");
-        return DeviceResponse.fromEntity(device);
+        var resp = DeviceResponse.fromEntity(device);
+        pushService.push(userId, "DEVICE_STATUS", resp);
+        return resp;
     }
 
     @Override
@@ -89,6 +93,8 @@ public class DeviceServiceImpl implements DeviceService {
         device.setLastActive(LocalDateTime.now());
         deviceRepository.save(device);
         auditLogService.log(userId, "UNLOCK_DEVICE", "解锁设备 #" + deviceId, "system");
-        return DeviceResponse.fromEntity(device);
+        var resp2 = DeviceResponse.fromEntity(device);
+        pushService.push(userId, "DEVICE_STATUS", resp2);
+        return resp2;
     }
 }
